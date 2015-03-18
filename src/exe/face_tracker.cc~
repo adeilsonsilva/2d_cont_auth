@@ -40,9 +40,8 @@
 #include <FaceTracker/Tracker.h>
 #include <opencv/highgui.h>
 #include <iostream>
-/* Kinect */
 
-#include <signal.h>
+/* Kinect */
 #include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
@@ -53,10 +52,50 @@ void sigint_handler(int s)
 {
   protonect_shutdown = true;
 }
-
-/* Kinect */
+/**/
 //=============================================================================
-void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
+bool primeiro = true;
+cv::Mat firstFace, meanFace, meanGray;
+std::vector<std::vector<cv::Point2f> > normVec;
+
+void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::Point2f dstTri[3], cv::Mat warp_final){
+    //int t, ellap;
+    //t= clock();
+    int x1 = 150, y1 = 50;
+    cv::Mat warp_mat( 2, 3, CV_32FC1 );
+    cv::Mat warp_dst, warp_mask;
+    CvPoint trianglePoints[3];
+    trianglePoints[0] = dstTri[0];
+    trianglePoints[1] = dstTri[1];
+    trianglePoints[2] = dstTri[2];
+    warp_dst  = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
+    warp_mask = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
+
+    //std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
+
+    /// Get the Affine Transform
+#if 1
+    for(int i=0;i<3;i++){
+        srcTri[i].x -= x1;
+        srcTri[i].y -= y1;
+        dstTri[i].x -= x1;
+        dstTri[i].y -= y1;
+
+    }
+#endif    
+    warp_mat = cv::getAffineTransform( srcTri, dstTri );
+
+    /// Apply the Affine Transform just found to the src image
+    cv::Rect roi(x1, y1, originalImage.cols - 150, originalImage.rows - 50);
+    cv::Mat originalImageRoi= originalImage(roi);
+    cv::Mat warp_dstRoi     = warp_dst(roi);
+    cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
+    cvFillConvexPoly( new IplImage(warp_mask), trianglePoints, 3, CV_RGB(255,255,255), CV_AA, 0 );    
+    warp_dst.copyTo(warp_final,warp_mask);
+    //cv::imshow("Normalized", warp_final);
+ }
+
+void meanDraw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
 {
   int i,n = shape.rows/2; cv::Point p1,p2; cv::Scalar c;
 
@@ -70,17 +109,17 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
 		   shape.at<double>(tri.at<int>(i,0)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
 		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    cv::line(image,p1,p2,c);
+    //cv::line(image,p1,p2,c);
     p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
 		   shape.at<double>(tri.at<int>(i,0)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
 		   shape.at<double>(tri.at<int>(i,2)+n,0));
-    cv::line(image,p1,p2,c);
+    //cv::line(image,p1,p2,c);
     p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
 		   shape.at<double>(tri.at<int>(i,2)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
 		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    cv::line(image,p1,p2,c);
+    //cv::line(image,p1,p2,c);
   }
   //draw connections
   c = CV_RGB(0,0,255);
@@ -91,14 +130,87 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
 		   shape.at<double>(con.at<int>(0,i)+n,0));
     p2 = cv::Point(shape.at<double>(con.at<int>(1,i),0),
 		   shape.at<double>(con.at<int>(1,i)+n,0));
-    cv::line(image,p1,p2,c,1);
+    //cv::line(image,p1,p2,c,1);
   }
   //draw points
   for(i = 0; i < n; i++){    
     if(visi.at<int>(i,0) == 0)continue;
     p1 = cv::Point(shape.at<double>(i,0),shape.at<double>(i+n,0));
-    c = CV_RGB(255,0,0); cv::circle(image,p1,2,c);
+    //c = CV_RGB(255,0,0); cv::circle(image,p1,2,c);
   }return;
+}
+//=============================================================================
+void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
+{
+  int i,n = shape.rows/2; cv::Point2f p1,p2; cv::Scalar c;
+  std::vector<cv::Point2f> pts;
+  cv::Point2f orig[3], normPts[3];
+  cv::Mat origIm = image.clone();
+#if 1
+  //draw triangulation
+  c = CV_RGB(0,0,0);
+  for(i = 0; i < tri.rows; i++){
+    if(visi.at<int>(tri.at<int>(i,0),0) == 0 ||
+       visi.at<int>(tri.at<int>(i,1),0) == 0 ||
+       visi.at<int>(tri.at<int>(i,2),0) == 0)continue;
+    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
+		   shape.at<double>(tri.at<int>(i,0)+n,0));
+    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
+		   shape.at<double>(tri.at<int>(i,1)+n,0));
+    //cv::line(image,p1,p2,c);
+	if(primeiro){
+		pts.push_back(p1);
+		pts.push_back(p2);
+	}else{
+        orig[0] = p1;
+        orig[1] = p2;
+    }
+    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
+		   shape.at<double>(tri.at<int>(i,0)+n,0));
+    p2 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
+		   shape.at<double>(tri.at<int>(i,2)+n,0));
+    //cv::line(image,p1,p2,c);
+	if(primeiro){
+		pts.push_back(p2);	
+		normVec.push_back(pts);
+        //std::cout << " Tri: " << pts.size() << std::endl;
+		pts.clear();
+	}else{
+                orig[2] = p2;
+    }
+    p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
+		   shape.at<double>(tri.at<int>(i,2)+n,0));
+    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
+		   shape.at<double>(tri.at<int>(i,1)+n,0));
+    //cv::line(image,p1,p2,c);
+    if(!primeiro){
+            normPts[0] = normVec[i][0];
+            normPts[1] = normVec[i][1];
+            normPts[2] = normVec[i][2];
+            //cv::flip(firstFace, firstFace, 1);
+            warpTextureFromTriangle(orig, origIm, normPts, firstFace);
+    }
+  }
+  //std::cout << "Tri: " << tri.rows << " Norm: " << normVec.size() << " Tri: " << pts.size() << std::endl;
+ #endif
+  //draw connections
+  c = CV_RGB(0,0,255);
+  for(i = 0; i < con.cols; i++){
+    if(visi.at<int>(con.at<int>(0,i),0) == 0 ||
+       visi.at<int>(con.at<int>(1,i),0) == 0)continue;
+    p1 = cv::Point(shape.at<double>(con.at<int>(0,i),0),
+		   shape.at<double>(con.at<int>(0,i)+n,0));
+    p2 = cv::Point(shape.at<double>(con.at<int>(1,i),0),
+		   shape.at<double>(con.at<int>(1,i)+n,0));
+    //cv::line(image,p1,p2,c,1);
+  }
+  //draw points
+  for(i = 0; i < n; i++){    
+    if(visi.at<int>(i,0) == 0)continue;
+    p1 = cv::Point(shape.at<double>(i,0),shape.at<double>(i+n,0));
+    //c = CV_RGB(255,0,0); cv::circle(image,p1,2,c);
+  }
+  return;
 }
 //=============================================================================
 int parse_cmd(int argc, const char** argv,
@@ -174,6 +286,29 @@ int parse_cmd(int argc, const char** argv,
 //=============================================================================
 int main(int argc, const char** argv)
 {
+
+  /* Kinect */
+  libfreenect2::Freenect2 freenect2;
+  libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
+
+  if(dev == 0)
+  {
+    std::cout << "no device connected or failure opening the default one!" << std::endl;
+    return -1;
+  }
+
+  signal(SIGINT, sigint_handler);
+  protonect_shutdown = false;
+
+  //libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color);
+  libfreenect2::FrameMap frames;
+
+  dev->setColorFrameListener(&listener);
+  //dev->setIrAndDepthFrameListener(&listener);
+  dev->start();
+  /**/
+  
   //parse command line arguments
   char ftFile[256],conFile[256],triFile[256];
   bool fcheck = false; double scale = 1; int fpd = -1; bool show = true;
@@ -190,18 +325,42 @@ int main(int argc, const char** argv)
   //initialize camera and display window
   cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
   //CvCapture* camera = cvCreateCameraCapture(CV_CAP_ANY); if(!camera)return -1;
+  //cv::VideoCapture video("video.mp4");
+  //meanFace = cv::imread("MeanFace.jpg");
+  //cv::imshow("Mean Face", meanFace);
   int64 t1,t0 = cvGetTickCount(); int fnum=0;
   cvNamedWindow("Face Tracker",1);
   std::cout << "Hot keys: "        << std::endl
 	    << "\t ESC - quit"     << std::endl
 	    << "\t d   - Redetect" << std::endl;
+/*
+  cv::cvtColor(meanFace, meanGray,CV_BGR2GRAY);
+  std::vector<int> wSize0; wSize0 = wSize2; 
+  if(model.Track(meanGray,wSize0,fpd,nIter,clamp,fTol,fcheck) == 0){
+    int idx = model._clm.GetViewIdx();
+    meanDraw(meanFace,model._shape,con,tri,model._clm._visi[idx]); 
+  }else{
+    if(show){cv::Mat R(meanFace,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
+    model.FrameReset();
+  }*/
+  //cv::imshow("MeanFace", meanFace); 
 
   //loop until quit (i.e user presses ESC)
   bool failed = true;
-  while(1){ 
+  while(!protonect_shutdown){ 
+    /* Kinect*/    
+    listener.waitForNewFrame(frames);
+    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+    cv::Mat color(rgb->height, rgb->width, CV_8UC3, rgb->data);
+    /**/
+
+    //video >> frame;
+
+    frame = color.clone();
+
     //grab image, resize and flip
-    IplImage* I = cvQueryFrame(camera); if(!I)continue; frame = I;
-    if(scale == 1)im = frame; 
+    //IplImage* I = cvQueryFrame(camera); if(!I)continue; frame = cv::cvarrToMat(I);
+    if(scale == 1)im = frame.clone(); 
     else cv::resize(frame,im,cv::Size(scale*frame.cols,scale*frame.rows));
     cv::flip(im,im,1); cv::cvtColor(im,gray,CV_BGR2GRAY);
 
@@ -226,9 +385,30 @@ int main(int argc, const char** argv)
 		  CV_FONT_HERSHEY_SIMPLEX,0.5,CV_RGB(255,255,255));
     }
     //show image and check for user input
-    imshow("Face Tracker",im); 
+	if(primeiro){
+        cv::flip(frame, firstFace, 1);
+        cv::resize(firstFace, firstFace, cv::Size(scale*firstFace.cols,scale*firstFace.rows));
+		//firstFace = frame.clone();
+        //firstFace = meanFace.clone();
+        //cv::resize(frame,firstFace,cv::Size(), 1.7, 1.4);
+		primeiro = false;
+	}
+    cv::imshow("Face Tracker",im); 
+    cv::imshow("First",  firstFace);
     int c = cvWaitKey(10);
     if(c == 27)break; else if(char(c) == 'd')model.FrameReset();
-  }return 0;
+
+    /* Kinect*/
+    listener.release(frames);
+    /**/
+  }
+
+  /* Kinect*/
+  // TODO: restarting ir stream doesn't work!
+  // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
+  dev->stop();
+  dev->close();
+  /**/
+  return 0;
 }
 //=============================================================================

@@ -40,6 +40,19 @@
 #include <FaceTracker/Tracker.h>
 #include <opencv/highgui.h>
 #include <iostream>
+
+/* Kinect */
+#include <libfreenect2/libfreenect2.hpp>
+#include <libfreenect2/frame_listener_impl.h>
+#include <libfreenect2/threading.h>
+
+bool protonect_shutdown = false;
+
+void sigint_handler(int s)
+{
+  protonect_shutdown = true;
+}
+/**/
 //=============================================================================
 bool primeiro = true;
 cv::Mat firstFace, meanFace, meanGray;
@@ -164,19 +177,19 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
 		pts.clear();
 	}else{
                 orig[2] = p2;
-        }
+    }
     p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
 		   shape.at<double>(tri.at<int>(i,2)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
 		   shape.at<double>(tri.at<int>(i,1)+n,0));
     //cv::line(image,p1,p2,c);
-        if(!primeiro){
-                normPts[0] = normVec[i][0];
-                normPts[1] = normVec[i][1];
-                normPts[2] = normVec[i][2];
-                //cv::flip(firstFace, firstFace, 1);
-                warpTextureFromTriangle(orig, origIm, normPts, firstFace);
-        }
+    if(!primeiro){
+        normPts[0] = normVec[i][0];
+        normPts[1] = normVec[i][1];
+        normPts[2] = normVec[i][2];
+        //cv::flip(firstFace, firstFace, 1);
+        warpTextureFromTriangle(orig, origIm, normPts, firstFace);
+    }
   }
   //std::cout << "Tri: " << tri.rows << " Norm: " << normVec.size() << " Tri: " << pts.size() << std::endl;
  #endif
@@ -273,6 +286,29 @@ int parse_cmd(int argc, const char** argv,
 //=============================================================================
 int main(int argc, const char** argv)
 {
+
+  /* Kinect */
+  libfreenect2::Freenect2 freenect2;
+  libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
+
+  if(dev == 0)
+  {
+    std::cout << "no device connected or failure opening the default one!" << std::endl;
+    return -1;
+  }
+
+  signal(SIGINT, sigint_handler);
+  protonect_shutdown = false;
+
+  //libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+  libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color);
+  libfreenect2::FrameMap frames;
+
+  dev->setColorFrameListener(&listener);
+  //dev->setIrAndDepthFrameListener(&listener);
+  dev->start();
+  /**/
+  
   //parse command line arguments
   char ftFile[256],conFile[256],triFile[256];
   bool fcheck = false; double scale = 1; int fpd = -1; bool show = true;
@@ -289,8 +325,8 @@ int main(int argc, const char** argv)
   //initialize camera and display window
   cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
   //CvCapture* camera = cvCreateCameraCapture(CV_CAP_ANY); if(!camera)return -1;
-  cv::VideoCapture video("video.mp4");
-  meanFace = cv::imread("MeanFace.jpg");
+  //cv::VideoCapture video("video.mp4");
+  //meanFace = cv::imread("MeanFace.jpg");
   //cv::imshow("Mean Face", meanFace);
   int64 t1,t0 = cvGetTickCount(); int fnum=0;
   cvNamedWindow("Face Tracker",1);
@@ -311,10 +347,19 @@ int main(int argc, const char** argv)
 
   //loop until quit (i.e user presses ESC)
   bool failed = true;
-  while(1){ 
-    video >> frame;
+  while(!protonect_shutdown){ 
+    /* Kinect*/    
+    listener.waitForNewFrame(frames);
+    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+    cv::Mat color(rgb->height, rgb->width, CV_8UC3, rgb->data);
+    /**/
+
+    //video >> frame;
+
+    frame = color.clone();
+
     //grab image, resize and flip
-    ///IplImage* I = cvQueryFrame(camera); if(!I)continue; frame = cv::cvarrToMat(I);
+    //IplImage* I = cvQueryFrame(camera); if(!I)continue; frame = cv::cvarrToMat(I);
     if(scale == 1)im = frame.clone(); 
     else cv::resize(frame,im,cv::Size(scale*frame.cols,scale*frame.rows));
     cv::flip(im,im,1); cv::cvtColor(im,gray,CV_BGR2GRAY);
@@ -342,6 +387,7 @@ int main(int argc, const char** argv)
     //show image and check for user input
 	if(primeiro){
         cv::flip(frame, firstFace, 1);
+        cv::resize(firstFace, firstFace, cv::Size(scale*firstFace.cols,scale*firstFace.rows));
 		//firstFace = frame.clone();
         //firstFace = meanFace.clone();
         //cv::resize(frame,firstFace,cv::Size(), 1.7, 1.4);
@@ -351,6 +397,18 @@ int main(int argc, const char** argv)
     cv::imshow("First",  firstFace);
     int c = cvWaitKey(10);
     if(c == 27)break; else if(char(c) == 'd')model.FrameReset();
-  }return 0;
+
+    /* Kinect*/
+    listener.release(frames);
+    /**/
+  }
+
+  /* Kinect*/
+  // TODO: restarting ir stream doesn't work!
+  // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
+  dev->stop();
+  dev->close();
+  /**/
+  return 0;
 }
 //=============================================================================
