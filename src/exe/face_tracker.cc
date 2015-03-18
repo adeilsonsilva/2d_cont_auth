@@ -86,7 +86,7 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     warp_mat = cv::getAffineTransform( srcTri, dstTri );
 
     /// Apply the Affine Transform just found to the src image
-    cv::Rect roi(x1, y1, originalImage.cols - 150, originalImage.rows - 50);
+    cv::Rect roi(x1, y1, 350, 420);
     cv::Mat originalImageRoi= originalImage(roi);
     cv::Mat warp_dstRoi     = warp_dst(roi);
     cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );

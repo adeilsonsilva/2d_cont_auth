@@ -71,7 +71,7 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     warp_dst  = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
     warp_mask = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
 
-    //std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
+    std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
 
     /// Get the Affine Transform
 #if 1
@@ -86,7 +86,7 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     warp_mat = cv::getAffineTransform( srcTri, dstTri );
 
     /// Apply the Affine Transform just found to the src image
-    cv::Rect roi(x1, y1, originalImage.cols - 150, originalImage.rows - 50);
+    cv::Rect roi(x1, y1, 350, 420);
     cv::Mat originalImageRoi= originalImage(roi);
     cv::Mat warp_dstRoi     = warp_dst(roi);
     cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
@@ -184,11 +184,11 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
 		   shape.at<double>(tri.at<int>(i,1)+n,0));
     //cv::line(image,p1,p2,c);
     if(!primeiro){
-            normPts[0] = normVec[i][0];
-            normPts[1] = normVec[i][1];
-            normPts[2] = normVec[i][2];
-            //cv::flip(firstFace, firstFace, 1);
-            warpTextureFromTriangle(orig, origIm, normPts, firstFace);
+        normPts[0] = normVec[i][0];
+        normPts[1] = normVec[i][1];
+        normPts[2] = normVec[i][2];
+        //cv::flip(firstFace, firstFace, 1);
+        warpTextureFromTriangle(orig, origIm, normPts, firstFace);
     }
   }
   //std::cout << "Tri: " << tri.rows << " Norm: " << normVec.size() << " Tri: " << pts.size() << std::endl;
