@@ -53,6 +53,7 @@ void sigint_handler(int s)
   protonect_shutdown = true;
 }
 /**/
+
 //=============================================================================
 bool primeiro = true;
 cv::Mat firstFace, meanFace, meanGray;
@@ -71,9 +72,9 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     warp_dst  = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
     warp_mask = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
 
-    std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
+    //std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
 
-    /// Get the Affine Transform
+    // Get the Affine Transform
 #if 1
     for(int i=0;i<3;i++){
         srcTri[i].x -= x1;
@@ -321,6 +322,8 @@ int main(int argc, const char** argv)
   FACETRACKER::Tracker model(ftFile);
   cv::Mat tri=FACETRACKER::IO::LoadTri(triFile);
   cv::Mat con=FACETRACKER::IO::LoadCon(conFile);
+
+  cv::VideoWriter video("out.avi", CV_FOURCC('P','I','M','1'), 30, cv::Size(960,540), true);
   
   //initialize camera and display window
   cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
@@ -342,8 +345,9 @@ int main(int argc, const char** argv)
   }else{
     if(show){cv::Mat R(meanFace,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
     model.FrameReset();
-  }*/
-  //cv::imshow("MeanFace", meanFace); 
+  }
+  cv::imshow("MeanFace", meanFace); 
+*/
 
   //loop until quit (i.e user presses ESC)
   bool failed = true;
@@ -357,12 +361,12 @@ int main(int argc, const char** argv)
     //video >> frame;
 
     frame = color.clone();
-
+    
     //grab image, resize and flip
     //IplImage* I = cvQueryFrame(camera); if(!I)continue; frame = cv::cvarrToMat(I);
     if(scale == 1)im = frame.clone(); 
     else cv::resize(frame,im,cv::Size(scale*frame.cols,scale*frame.rows));
-    cv::flip(im,im,1); cv::cvtColor(im,gray,CV_BGR2GRAY);
+    cv::flip(im,im,1); cv::cvtColor(im,gray,CV_BGR2GRAY); video.write(im);
 
     //track this image
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
@@ -373,6 +377,7 @@ int main(int argc, const char** argv)
       if(show){cv::Mat R(im,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
       model.FrameReset(); failed = true;
     }     
+
     //draw framerate on display image 
     if(fnum >= 9){      
       t1 = cvGetTickCount();
@@ -384,6 +389,7 @@ int main(int argc, const char** argv)
       cv::putText(im,text,cv::Point(10,20),
 		  CV_FONT_HERSHEY_SIMPLEX,0.5,CV_RGB(255,255,255));
     }
+
     //show image and check for user input
 	if(primeiro){
         cv::flip(frame, firstFace, 1);
@@ -409,6 +415,7 @@ int main(int argc, const char** argv)
   dev->stop();
   dev->close();
   /**/
+  
   return 0;
 }
 //=============================================================================
