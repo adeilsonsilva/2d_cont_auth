@@ -160,7 +160,7 @@ void Patch::Response(cv::Mat &im,cv::Mat &resp)
 	     __FILE__,__LINE__,_t); abort();
     }
   }
-  cv::matchTemplate(I,_W,res_,CV_TM_CCOEFF_NORMED);
+  matchTemplate(I,_W,res_,CV_TM_CCOEFF_NORMED);
   cv::MatIterator_<double> p = resp.begin<double>();
   cv::MatIterator_<float> q1 = res_.begin<float>();
   cv::MatIterator_<float> q2 = res_.end<float>();

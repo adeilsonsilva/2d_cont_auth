@@ -48,7 +48,7 @@ all: bin/face_tracker
 -include $(DEPENDENCY_FILES)
 
 bin/face_tracker: $(ALL_OBJECTS)
-	$(CXX) $(LDFLAGS)  -o $@ $(ALL_OBJECTS) $(LIBRARIES) `pkg-config --cflags --libs opencv`
+	$(CXX) $(LDFLAGS)  -o $@ $(ALL_OBJECTS) $(LIBRARIES) `pkg-config --cflags --libs opencv` -lfreenect2
 
 .PHONY: clean
 clean:
