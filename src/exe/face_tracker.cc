@@ -316,6 +316,11 @@ int main(int argc, const char** argv)
   cv::Mat tri=FACETRACKER::IO::LoadTri(triFile);
   cv::Mat con=FACETRACKER::IO::LoadCon(conFile);
 
+  /* Parâmetros para salvar a imagem */
+  std::vector<int> comPressParam;
+  int imgCount = 0;
+  std::string imgOut = "../out/Img";
+
   #if WRITEVIDEO
     std::string videoName = getTime();
     std::cout << videoName << std::endl;
@@ -394,6 +399,18 @@ int main(int argc, const char** argv)
     cv::imshow("Face Tracker", im); 
     normFace = normImg(normRect);
     cv::imshow("Face Normalizada",  normFace);
+    imgCount++;
+
+
+    /* Writes image on the disk */
+    comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    comPressParam.push_back(5);
+    std::string result;
+    std::stringstream sstm;
+    sstm << imgOut << imgCount << ".png";
+    result = sstm.str();
+    cv::imwrite(result, normFace, comPressParam);
+
     int c = cvWaitKey(1);
     if(char(c) == 's')break; else if(char(c) == 'd')model.FrameReset();
 
