@@ -42,6 +42,14 @@
 #include <iostream>
 #include <ctime>
 
+/* Incluido para reconhecimento*/
+#include "opencv2/core.hpp"
+#include "opencv2/face.hpp"
+#include "opencv2/opencv.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
+#include <opencv/cv.h>
+
 #define KINECT 0
 #define WRITEVIDEO 1
 
@@ -66,6 +74,31 @@ cv::Rect normRect(57, 150, 200, 200);
 std::vector<std::vector<cv::Point2f> > normVec;
 std::vector<cv::Point2f> pts;
 
+static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, std::vector<int>& labels, std::vector<std::string>& names, char separator = ';') {
+    std::ifstream file(filename.c_str(), std::ifstream::in);
+    cv::Mat dbImg, dbImageGray;
+    if (!file) {
+        std::string error_message = "No valid input file was given, please check the given filename.";
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    std::string line, path, name, classlabel;
+    while (getline(file, line)) {
+        std::stringstream liness(line);
+        std::getline(liness, path, separator);
+	    std::getline(liness, name, separator);
+        std::getline(liness, classlabel);
+        if(!path.empty() && !classlabel.empty()) {
+            //std::cout << path << std::endl;
+            /* As imagens do banco estão coloridas, é necessário converte-las! */
+            dbImg = cv::imread(path, 1);
+            cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY);
+            images.push_back(dbImageGray);
+	        names.push_back(name);
+            labels.push_back(atoi(classlabel.c_str()));
+        }
+    }
+}
+
 std::string getTime(){
   time_t rawtime;
   struct tm * timeinfo;
@@ -74,7 +107,7 @@ std::string getTime(){
   time (&rawtime);
   timeinfo = localtime(&rawtime);
 
-  strftime(buffer,80,"%d-%m-%Y %I:%M:%S.avi",timeinfo);
+  strftime(buffer,100,"%d-%m-%Y %I:%M:%S.avi",timeinfo);
   std::string str(buffer);
 
   return str;
@@ -321,6 +354,24 @@ int main(int argc, const char** argv)
   int imgCount = 0;
   std::string imgOut = "../out/Img";
 
+  /* Caminho do CSV: */
+  std::string csvFilePath = "../dataset/csv.ext";
+  std::string fn_csv = std::string(csvFilePath);
+
+  // Os seguintes vetores guardarão as imagens, os nomes dos personagens e as labels
+  std::vector<cv::Mat> images;
+  std::vector<std::string> names;
+  std::vector<int> labels;
+
+  // Leitura dos dados
+  try {
+	  read_csv(fn_csv, images, labels, names);
+  }catch (cv::Exception& e) {
+    std::cerr << "Error opening file \"" << fn_csv << "\". Reason: " << e.msg << std::endl;
+	// nothing more we can do
+	exit(1);
+  }
+
   #if WRITEVIDEO
     std::string videoName = getTime();
     std::cout << videoName << std::endl;
@@ -351,6 +402,40 @@ int main(int argc, const char** argv)
   }
   //cv::imshow("MeanFace", meanFace); 
 
+
+  /* Pega a altura da primeira imagem. Nós precisaremos disso
+  * depois para redimensionar as imagens para o seu tamanho original
+  * E precisaremos redimensionar as imagens de entrada para esse tamanho. 
+  int im_width = images[0].cols;
+  int im_height = images[0].rows;
+
+  Mat grayFaceResized;
+  cv::resize(grayFace, grayFaceResized, Size(im_width, im_height), 1.0, 1.0, INTER_CUBIC);
+
+  * USAR ESSA PARTE CASO AS IMAGENS DO BANCO NÃO TENHAM O MESMO TAMANHO DA IMAGEM NORMALIZADA
+  */
+
+  // The following lines simply get the last images from
+  // your dataset and remove it from the vector. This is
+  // done, so that the training data (which we learn the
+  // cv::FaceRecognizer on) and the test data we test
+  // the model with, do not overlap.
+  cv::Mat testSample = images[images.size() - 1];
+  int testLabel = labels[labels.size() - 1];
+  images.pop_back();
+  labels.pop_back();
+
+  /* Cria um FaceRecognizer e treina em cima dele: */
+  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createEigenFaceRecognizer(80, 1.5);
+  try{
+    std::cout << "Treinando.." << std::endl;
+    faceRec->train(images, labels);
+    std::cout << "Fim do treino!" << std::endl;
+  }catch(cv::Exception& e){
+	std::cerr << "Erro no Treino! Motivo: " << e.msg << std::endl;
+	/* Nothing more we can do */
+	exit(1);
+  }
 
   //loop until quit (i.e user presses ESC)
   bool failed = true;
@@ -395,11 +480,30 @@ int main(int argc, const char** argv)
 		  CV_FONT_HERSHEY_SIMPLEX,0.5,CV_RGB(255,255,255));
     }
 
+    cv::Mat normFaceGray;
+    normFace = normImg(normRect);
+    cv::cvtColor(normFace, normFaceGray,CV_BGR2GRAY);
+    cv::imshow("Face Normalizada",  normFaceGray);
+    imgCount++;
+
+    /* Now perform the prediction, see how easy that is: */
+    int Prediction = -1;
+    double confidence = 0.0;
+    int position = -1;
+    std::string nameFound;
+    faceRec->predict(normFaceGray, Prediction, confidence);
+    position = find(labels.begin(), labels.end(), Prediction) - labels.begin();
+    nameFound = names[position];
+
+    /* Create the text we will annotate the box with: */
+    std::string grayBoxText = cv::format("Prediction = %d || Confidence = %.2f || Name = %s", Prediction, confidence, nameFound.c_str());          
+
+    /* And now put it into the images (BGR AND GRAY): */
+    putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
+
+
     //show image and check for user input
     cv::imshow("Face Tracker", im); 
-    normFace = normImg(normRect);
-    cv::imshow("Face Normalizada",  normFace);
-    imgCount++;
 
 
     /* Writes image on the disk */
