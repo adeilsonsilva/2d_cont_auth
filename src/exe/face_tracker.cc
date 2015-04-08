@@ -88,10 +88,12 @@ static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, 
 	    std::getline(liness, name, separator);
         std::getline(liness, classlabel);
         if(!path.empty() && !classlabel.empty()) {
-            //std::cout << path << std::endl;
-            /* As imagens do banco estão coloridas, é necessário converte-las! */
-            dbImg = cv::imread(path, 1);
-            cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY);
+            /* std::cout << path << std::endl;
+             * As imagens do banco estão coloridas, é necessário converte-las! 
+             * dbImg = cv::imread(path, 1);
+             * cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY); 
+             */
+            dbImageGray = cv::imread(path, 0);
             images.push_back(dbImageGray);
 	        names.push_back(name);
             labels.push_back(atoi(classlabel.c_str()));
@@ -426,7 +428,7 @@ int main(int argc, const char** argv)
   labels.pop_back();
 
   /* Cria um FaceRecognizer e treina em cima dele: */
-  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createEigenFaceRecognizer(80, 1.5);
+  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createFisherFaceRecognizer();
   try{
     std::cout << "Treinando.." << std::endl;
     faceRec->train(images, labels);
@@ -483,6 +485,7 @@ int main(int argc, const char** argv)
     cv::Mat normFaceGray;
     normFace = normImg(normRect);
     cv::cvtColor(normFace, normFaceGray,CV_BGR2GRAY);
+    //cv::resize(normFaceGray,normFaceGray, cv::Size(92,112));
     cv::imshow("Face Normalizada",  normFaceGray);
     imgCount++;
 
