@@ -516,7 +516,7 @@ int main(int argc, const char** argv)
     std::stringstream sstm;
     sstm << imgOut << imgCount << ".png";
     result = sstm.str();
-    cv::imwrite(result, normFace, comPressParam);
+    cv::imwrite(result, normFaceGray, comPressParam);
 
     int c = cvWaitKey(1);
     if(char(c) == 's')break; else if(char(c) == 'd')model.FrameReset();
