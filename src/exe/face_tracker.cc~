@@ -484,7 +484,8 @@ int main(int argc, const char** argv)
 
     cv::Mat normFaceGray;
     normFace = normImg(normRect);
-    //cv::cvtColor(normFace, normFaceGray,CV_BGR2GRAY);
+    cv::cvtColor(normFace, normFaceGray,CV_BGR2GRAY);
+    //std::cout << normFaceGray.rows << "::::" << normFaceGray.cols << std::endl;
     //cv::resize(normFaceGray,normFaceGray, cv::Size(92,112));
     cv::imshow("Face Normalizada",  normFaceGray);
     imgCount++;
@@ -516,7 +517,7 @@ int main(int argc, const char** argv)
     std::stringstream sstm;
     sstm << imgOut << imgCount << ".png";
     result = sstm.str();
-    cv::imwrite(result, normFace, comPressParam);
+    cv::imwrite(result, normFaceGray, comPressParam);
 
     int c = cvWaitKey(1);
     if(char(c) == 's')break; else if(char(c) == 'd')model.FrameReset();
