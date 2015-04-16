@@ -377,7 +377,7 @@ int main(int argc, const char** argv)
   #if WRITEVIDEO
     std::string videoName = getTime();
     std::cout << videoName << std::endl;
-    cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 10, cv::Size(960,540), true);
+    cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(960,540), true);
   #endif
   
   //initialize camera and display window

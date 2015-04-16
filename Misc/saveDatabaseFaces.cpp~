@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
         Filename << "dataset/" << name << "/" << getTime();
         std::string videoName = Filename.str();
         std::cout << videoName << std::endl;
-        cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(M_WIDTH,M_HEIGHT), true);
+        cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 4, cv::Size(M_WIDTH,M_HEIGHT), true);
     #endif
 
     #if KINECT == 0
