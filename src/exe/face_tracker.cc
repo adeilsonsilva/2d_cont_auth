@@ -52,6 +52,14 @@
 
 #define KINECT 0
 #define WRITEVIDEO 1
+#define M_WIDTH 960
+#define M_HEIGHT 540
+#define R_WIDTH 200
+#define R_HEIGHT 200
+#define R_X 57
+#define R_Y 150
+#define ROI_X 550
+#define ROI_Y 250
 
 #if KINECT
 
@@ -70,7 +78,7 @@ void sigint_handler(int s)
 
 //=============================================================================
 cv::Mat firstFace, meanFace, meanGray, normImg(1, 1, 16), normFace;
-cv::Rect normRect(57, 150, 200, 200);
+cv::Rect normRect(R_X, R_Y, R_WIDTH, R_HEIGHT);
 std::vector<std::vector<cv::Point2f> > normVec;
 std::vector<cv::Point2f> pts;
 
@@ -140,7 +148,7 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     warp_mat = cv::getAffineTransform( srcTri, dstTri );
 
     /// Apply the Affine Transform just found to the src image
-    cv::Rect roi(x1, y1, 550, 250);
+    cv::Rect roi(x1, y1, ROI_X, ROI_Y);
     cv::Mat originalImageRoi= originalImage(roi);
     cv::Mat warp_dstRoi     = warp_dst(roi);
     cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
@@ -377,7 +385,7 @@ int main(int argc, const char** argv)
   #if WRITEVIDEO
     std::string videoName = getTime();
     std::cout << videoName << std::endl;
-    cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(960,540), true);
+    cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(M_WIDTH,M_HEIGHT), true);
   #endif
   
   //initialize camera and display window
@@ -450,11 +458,12 @@ int main(int argc, const char** argv)
 
     video >> frame;
     
-    //grab image, resize and flip
-    cv::resize(frame,im, cv::Size(960,540));
+    //grab image, resize, flip and equalize histogram
+    cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
     cv::flip(im,im,1); 
     cv::cvtColor(im,gray,CV_BGR2GRAY); 
-        
+    cv::equalizeHist(gray, gray);    
+
     #if WRITEVIDEO
         videoFile.write(im);
     #endif
