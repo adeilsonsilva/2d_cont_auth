@@ -37,29 +37,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////////////
-#include <FaceTracker/Tracker.h>
-#include <opencv/highgui.h>
-#include <iostream>
-#include <ctime>
-
-/* Incluido para reconhecimento*/
-#include "opencv2/core.hpp"
-#include "opencv2/face.hpp"
-#include "opencv2/opencv.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/highgui/highgui_c.h"
-#include <opencv/cv.h>
-
-#define KINECT 0
-#define WRITEVIDEO 1
-#define M_WIDTH 960
-#define M_HEIGHT 540
-#define R_WIDTH 200
-#define R_HEIGHT 200
-#define R_X 57
-#define R_Y 150
-#define ROI_X 550
-#define ROI_Y 250
+#include "base.hpp"
 
 #if KINECT
 
@@ -75,251 +53,6 @@ void sigint_handler(int s)
 }
 
 #endif
-
-//=============================================================================
-cv::Mat firstFace, meanFace, meanGray, normImg(1, 1, 16), normFace;
-cv::Rect normRect(R_X, R_Y, R_WIDTH, R_HEIGHT);
-std::vector<std::vector<cv::Point2f> > normVec;
-std::vector<cv::Point2f> pts;
-
-static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, std::vector<int>& labels, std::vector<std::string>& names, char separator = ';') {
-    std::ifstream file(filename.c_str(), std::ifstream::in);
-    cv::Mat dbImg, dbImageGray;
-    if (!file) {
-        std::string error_message = "No valid input file was given, please check the given filename.";
-        CV_Error(CV_StsBadArg, error_message);
-    }
-    std::string line, path, name, classlabel;
-    while (getline(file, line)) {
-        std::stringstream liness(line);
-        std::getline(liness, path, separator);
-	    std::getline(liness, name, separator);
-        std::getline(liness, classlabel);
-        if(!path.empty() && !classlabel.empty()) {
-            /* std::cout << path << std::endl;
-             * As imagens do banco estão coloridas, é necessário converte-las! 
-             * dbImg = cv::imread(path, 1);
-             * cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY); 
-             */
-            dbImageGray = cv::imread(path, 0);
-            images.push_back(dbImageGray);
-	        names.push_back(name);
-            labels.push_back(atoi(classlabel.c_str()));
-        }
-    }
-}
-
-std::string getTime(){
-  time_t rawtime;
-  struct tm * timeinfo;
-  char buffer[100];
-
-  time (&rawtime);
-  timeinfo = localtime(&rawtime);
-
-  strftime(buffer,100,"%d-%m-%Y %I:%M:%S.avi",timeinfo);
-  std::string str(buffer);
-
-  return str;
-}
-
-void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::Point2f dstTri[3], cv::Mat warp_final){
-    int x1 = 50, y1 = 100;
-    cv::Mat warp_mat( 2, 3, CV_32FC1 );
-    cv::Mat warp_dst, warp_mask;
-    cv::Point trianglePoints[3];
-	trianglePoints[0] = dstTri[0];
-    trianglePoints[1] = dstTri[1];
-    trianglePoints[2] = dstTri[2];
-    warp_dst  = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
-    warp_mask = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
-
-    //std::cout << "Rows: " << originalImage.rows << " Cols: " << originalImage.cols << std::endl;
-
-    // Get the Affine Transform
-    for(int i=0;i<3;i++){
-        srcTri[i].x -= x1;
-        srcTri[i].y -= y1;
-        dstTri[i].x -= x1;
-        dstTri[i].y -= y1;
-
-    }
-
-    warp_mat = cv::getAffineTransform( srcTri, dstTri );
-
-    /// Apply the Affine Transform just found to the src image
-    cv::Rect roi(x1, y1, ROI_X, ROI_Y);
-    cv::Mat originalImageRoi= originalImage(roi);
-    cv::Mat warp_dstRoi     = warp_dst(roi);
-    cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
-	cv::fillConvexPoly(warp_mask, trianglePoints, 3, CV_RGB(255, 255, 255), CV_AA, 0);
-	warp_dst.copyTo(normImg, warp_mask);
-	/* Caso a Face Normalizada não esteja aparecendo,  descomente a linha abaixo e veja qual o ROI utilizado */
-	//cv::imshow("ROI", originalImageRoi);
- }
-
-void meanDraw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
-{
-  int i,n = shape.rows/2; cv::Point p1,p2; cv::Scalar c;
-
-  //draw triangulation
-  c = CV_RGB(0,0,0);
-  for(i = 0; i < tri.rows; i++){
-    if(visi.at<int>(tri.at<int>(i,0),0) == 0 ||
-       visi.at<int>(tri.at<int>(i,1),0) == 0 ||
-       visi.at<int>(tri.at<int>(i,2),0) == 0)continue;
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
-		   shape.at<double>(tri.at<int>(i,0)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
-		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    //cv::line(image,p1,p2,c);
-	pts.push_back(p1);
-	pts.push_back(p2);
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
-		   shape.at<double>(tri.at<int>(i,0)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
-		   shape.at<double>(tri.at<int>(i,2)+n,0));
-    //cv::line(image,p1,p2,c);
-	pts.push_back(p2);	
-	normVec.push_back(pts);
-    //std::cout << " Tri: " << pts.size() << std::endl;
-	pts.clear();
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
-		   shape.at<double>(tri.at<int>(i,2)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
-		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    //cv::line(image,p1,p2,c);
-  } 
-  return;
-}
-//=============================================================================
-void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &con,cv::Mat &tri,cv::Mat &visi)
-{
-  int i,n = shape.rows/2; cv::Point2f p1,p2; cv::Scalar c;
-  cv::Point2f orig[3], normPts[3];
-  cv::Mat origIm = image.clone();
-
-  //draw triangulation
-  c = CV_RGB(0,0,0);
-  for(i = 0; i < tri.rows; i++){
-    if(visi.at<int>(tri.at<int>(i,0),0) == 0 ||
-       visi.at<int>(tri.at<int>(i,1),0) == 0 ||
-       visi.at<int>(tri.at<int>(i,2),0) == 0)continue;
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
-		   shape.at<double>(tri.at<int>(i,0)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
-		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    //cv::line(image,p1,p2,c);
-    orig[0] = p1;
-    orig[1] = p2;
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
-		   shape.at<double>(tri.at<int>(i,0)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
-		   shape.at<double>(tri.at<int>(i,2)+n,0));
-    //cv::line(image,p1,p2,c);
-    orig[2] = p2;
-    p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
-		   shape.at<double>(tri.at<int>(i,2)+n,0));
-    p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
-		   shape.at<double>(tri.at<int>(i,1)+n,0));
-    //cv::line(image,p1,p2,c);
-    normPts[0] = normVec[i][0];
-    normPts[1] = normVec[i][1];
-    normPts[2] = normVec[i][2];
-    warpTextureFromTriangle(orig, origIm, normPts, normImg);
-  }
-#if 0
-  //draw connections
-  c = CV_RGB(0,0,255);
-  for(i = 0; i < con.cols; i++){
-    if(visi.at<int>(con.at<int>(0,i),0) == 0 ||
-       visi.at<int>(con.at<int>(1,i),0) == 0)continue;
-    p1 = cv::Point(shape.at<double>(con.at<int>(0,i),0),
-		   shape.at<double>(con.at<int>(0,i)+n,0));
-    p2 = cv::Point(shape.at<double>(con.at<int>(1,i),0),
-		   shape.at<double>(con.at<int>(1,i)+n,0));
-    //cv::line(image,p1,p2,c,1);
-  }
-  //draw points
-  for(i = 0; i < n; i++){    
-    if(visi.at<int>(i,0) == 0)continue;
-    p1 = cv::Point(shape.at<double>(i,0),shape.at<double>(i+n,0));
-    //c = CV_RGB(255,0,0); cv::circle(image,p1,2,c);
-  }
-#endif
-  return;
-}
-//=============================================================================
-int parse_cmd(int argc, const char** argv,
-	      char* ftFile,char* conFile,char* triFile,
-	      bool &fcheck,double &scale,int &fpd)
-{
-  int i; fcheck = false; scale = 1; fpd = -1;
-  for(i = 1; i < argc; i++){
-    if((std::strcmp(argv[i],"-?") == 0) ||
-       (std::strcmp(argv[i],"--help") == 0)){
-      std::cout << "track_face:- Written by Jason Saragih 2010" << std::endl
-	   << "Performs automatic face tracking" << std::endl << std::endl
-	   << "#" << std::endl 
-	   << "# usage: ./face_tracker [options]" << std::endl
-	   << "#" << std::endl << std::endl
-	   << "Arguments:" << std::endl
-	   << "-m <string> -> Tracker model (default: ../model/face2.tracker)"
-	   << std::endl
-	   << "-c <string> -> Connectivity (default: ../model/face.con)"
-	   << std::endl
-	   << "-t <string> -> Triangulation (default: ../model/face.tri)"
-	   << std::endl
-	   << "-s <double> -> Image scaling (default: 1)" << std::endl
-	   << "-d <int>    -> Frames/detections (default: -1)" << std::endl
-	   << "--check     -> Check for failure" << std::endl;
-      return -1;
-    }
-  }
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"--check") == 0){fcheck = true; break;}
-  }
-  if(i >= argc)fcheck = false;
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"-s") == 0){
-      if(argc > i+1)scale = std::atof(argv[i+1]); else scale = 1;
-      break;
-    }
-  }
-  if(i >= argc)scale = 1;
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"-d") == 0){
-      if(argc > i+1)fpd = std::atoi(argv[i+1]); else fpd = -1;
-      break;
-    }
-  }
-  if(i >= argc)fpd = -1;
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"-m") == 0){
-      if(argc > i+1)std::strcpy(ftFile,argv[i+1]);
-      else strcpy(ftFile,"../model/face2.tracker");
-      break;
-    }
-  }
-  if(i >= argc)std::strcpy(ftFile,"../model/face2.tracker");
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"-c") == 0){
-      if(argc > i+1)std::strcpy(conFile,argv[i+1]);
-      else strcpy(conFile,"../model/face.con");
-      break;
-    }
-  }
-  if(i >= argc)std::strcpy(conFile,"../model/face.con");
-  for(i = 1; i < argc; i++){
-    if(std::strcmp(argv[i],"-t") == 0){
-      if(argc > i+1)std::strcpy(triFile,argv[i+1]);
-      else strcpy(triFile,"../model/face.tri");
-      break;
-    }
-  }
-  if(i >= argc)std::strcpy(triFile,"../model/face.tri");
-  return 0;
-}
 //=============================================================================
 int main(int argc, const char** argv)
 {
@@ -391,7 +124,7 @@ int main(int argc, const char** argv)
   //initialize camera and display window
   cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
   #if KINECT == 0
-        cv::VideoCapture video(0);
+        cv::VideoCapture video("vid1.avi");
   #endif
 
   meanFace = cv::imread("MeanFace.jpg");
@@ -405,7 +138,7 @@ int main(int argc, const char** argv)
   std::vector<int> wSize0; wSize0 = wSize2; 
   if(model.Track(meanGray,wSize0,fpd,nIter,clamp,fTol,fcheck) == 0){
     int idx = model._clm.GetViewIdx();
-    meanDraw(meanFace,model._shape,con,tri,model._clm._visi[idx]); 
+    meanDraw(meanFace,model._shape,tri,model._clm._visi[idx]); 
   }else{
     if(show){cv::Mat R(meanFace,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
     model.FrameReset();
@@ -423,7 +156,7 @@ int main(int argc, const char** argv)
   cv::resize(grayFace, grayFaceResized, Size(im_width, im_height), 1.0, 1.0, INTER_CUBIC);
 
   * USAR ESSA PARTE CASO AS IMAGENS DO BANCO NÃO TENHAM O MESMO TAMANHO DA IMAGEM NORMALIZADA
-  */
+  
 
   // The following lines simply get the last images from
   // your dataset and remove it from the vector. This is
@@ -435,8 +168,10 @@ int main(int argc, const char** argv)
   images.pop_back();
   labels.pop_back();
 
+  */
+
   /* Cria um FaceRecognizer e treina em cima dele: */
-  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createFisherFaceRecognizer();
+  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer();
   try{
     std::cout << "Treinando.." << std::endl;
     faceRec->train(images, labels);
@@ -473,7 +208,7 @@ int main(int argc, const char** argv)
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
     if(model.Track(gray,wSize,fpd,nIter,clamp,fTol,fcheck) == 0){
       int idx = model._clm.GetViewIdx(); failed = false;
-      Draw(im,model._shape,con,tri,model._clm._visi[idx]); 
+      Draw(im,model._shape,tri,model._clm._visi[idx]); 
     }else{
       if(show){cv::Mat R(im,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
       model.FrameReset(); failed = true;
