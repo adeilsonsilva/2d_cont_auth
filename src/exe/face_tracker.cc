@@ -92,11 +92,34 @@ int main(int argc, const char** argv)
   cv::Mat tri=FACETRACKER::IO::LoadTri(triFile);
   cv::Mat con=FACETRACKER::IO::LoadCon(conFile);
 
-  /* Parâmetros para salvar a imagem */
+  /* Parâmetros para salvar os resultados */
+  std::string folderName = getTime();
+  std::cout << "Pasta de saída: ../out/" << folderName << std::endl;
   std::vector<int> comPressParam;
   int imgCount = 0;
-  std::string imgOut = "../out/Img";
-
+  std::string folderPath = "../out/";
+  std::string commandStr;
+  const char* commandStr_C;
+  std::stringstream command;
+  char resp;
+  command << "cd ../out && mkdir " << folderName << " && cd " << folderName << " && mkdir faces && mkdir frames";
+  commandStr = command.str();
+  commandStr_C = commandStr.c_str();
+  //std::cout << "command: " << commandStr << std::endl;
+  if(std::system(commandStr_C) != 0){
+         std::cout << "O diretorio " << folderName << " já existe! Sobrescrever? [s/n]: ";
+         std::cin >> resp;
+   		 if(resp == 'n' || resp == 'N')exit(1);
+  }
+  std::stringstream videoPath;
+  videoPath << folderPath << folderName << "/video.avi";
+  std::string videoName = videoPath.str();
+  std::stringstream resultsPath;
+  resultsPath << folderPath << folderName << "/results.txt";
+  std::string resultsName = resultsPath.str();
+  std::ofstream resultsFile;
+  resultsFile.open(resultsName.c_str());
+  
   /* Caminho do CSV: */
   std::string csvFilePath = "../dataset/csv.ext";
   std::string fn_csv = std::string(csvFilePath);
@@ -110,29 +133,27 @@ int main(int argc, const char** argv)
   try {
 	  read_csv(fn_csv, images, labels, names);
   }catch (cv::Exception& e) {
-    std::cerr << "Error opening file \"" << fn_csv << "\". Reason: " << e.msg << std::endl;
+    std::cerr << "Erro ao abrir o arquivo \"" << fn_csv << "\" Motivo: " << e.msg << std::endl;
 	// nothing more we can do
 	exit(1);
   }
 
   #if WRITEVIDEO
-    std::string videoName = getTime();
-    std::cout << videoName << std::endl;
     cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(M_WIDTH,M_HEIGHT), true);
   #endif
   
   //initialize camera and display window
   cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
   #if KINECT == 0
-        cv::VideoCapture video("vid1.avi");
+        cv::VideoCapture video("vid.avi");
   #endif
 
   meanFace = cv::imread("MeanFace.jpg");
   int64 t1,t0 = cvGetTickCount(); int fnum=0;
-  cvNamedWindow("Face Tracker",1);
-  std::cout << "Hot keys: "        << std::endl
-	    << "\t ESC - quit"     << std::endl
-	    << "\t d   - Redetect" << std::endl;
+  //cvNamedWindow("Face Tracker",1);
+  std::cout << "Atalhos: "        << std::endl
+	    << "s\t-\tSAIR"     << std::endl
+	    << "d\t-\tREDETECTAR" << std::endl;
 
   cv::cvtColor(meanFace, meanGray,CV_BGR2GRAY);
   std::vector<int> wSize0; wSize0 = wSize2; 
@@ -143,7 +164,7 @@ int main(int argc, const char** argv)
     if(show){cv::Mat R(meanFace,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
     model.FrameReset();
   }
-  //cv::imshow("MeanFace", meanFace); 
+  cv::imshow("MeanFace", meanFace); 
 
 
   /* Pega a altura da primeira imagem. Nós precisaremos disso
@@ -197,7 +218,6 @@ int main(int argc, const char** argv)
     cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
     cv::flip(im,im,1); 
     cv::cvtColor(im,gray,CV_BGR2GRAY); 
-    cv::equalizeHist(gray, gray);    
 
     #if WRITEVIDEO
         videoFile.write(im);
@@ -228,9 +248,10 @@ int main(int argc, const char** argv)
 
     cv::Mat normFaceGray;
     normFace = normImg(normRect);
-    cv::cvtColor(normFace, normFaceGray,CV_BGR2GRAY);
+    cv::cvtColor(normFace, normFaceGray, CV_BGR2GRAY);
     //cv::resize(normFaceGray,normFaceGray, cv::Size(92,112));
-    cv::imshow("Face Normalizada",  normFaceGray);
+    cv::equalizeHist(normFaceGray, normFaceGray);    
+    cv::imshow("Face Normalizada",  normImg);
     imgCount++;
 
     /* Now perform the prediction, see how easy that is: */
@@ -243,14 +264,15 @@ int main(int argc, const char** argv)
     nameFound = names[position];
 
     /* Create the text we will annotate the box with: */
-    std::string grayBoxText = cv::format("Prediction = %d || Confidence = %.2f || Name = %s", Prediction, confidence, nameFound.c_str());          
+    std::string grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || Name: %s\n", imgCount, Prediction, confidence, nameFound.c_str());          
+	if(resultsFile.is_open()) resultsFile << grayBoxText;
 
     /* And now put it into the images (BGR AND GRAY): */
-    putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
+    //putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
 
 
     //show image and check for user input
-    cv::imshow("Face Tracker", im); 
+    cv::imshow("Reconhecimento Facial 2D", im); 
 
 
     /* Writes image on the disk */
@@ -258,9 +280,15 @@ int main(int argc, const char** argv)
     comPressParam.push_back(5);
     std::string result;
     std::stringstream sstm;
-    sstm << imgOut << imgCount << ".png";
+    sstm << folderPath << folderName << "/frames/" << imgCount << ".png";
     result = sstm.str();
-    cv::imwrite(result, normFaceGray, comPressParam);
+    cv::imwrite(result, im, comPressParam);
+    //comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    //comPressParam.push_back(5);
+	sstm.str("");
+    sstm << folderPath << folderName << "/faces/" << imgCount << ".png";
+	result = sstm.str();
+	cv::imwrite(result, normFaceGray, comPressParam);
 
     int c = cvWaitKey(1);
     if(char(c) == 's')break; else if(char(c) == 'd')model.FrameReset();
@@ -276,6 +304,7 @@ int main(int argc, const char** argv)
     dev->close();
   #endif
   
+  resultsFile.close();
   return 0;
 }
 //=============================================================================

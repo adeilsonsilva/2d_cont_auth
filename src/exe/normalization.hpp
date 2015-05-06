@@ -1,6 +1,6 @@
 //void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::Point2f dstTri[3], cv::Mat warp_final){
 void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::Point2f dstTri[3]){
-    int x1 = 50, y1 = 100;
+    int x1 = 0, y1 = 0;
     cv::Mat warp_mat( 2, 3, CV_32FC1 );
     cv::Mat warp_dst, warp_mask;
     cv::Point trianglePoints[3];
@@ -25,8 +25,8 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
 
     /// Apply the Affine Transform just found to the src image
     cv::Rect roi(x1, y1, ROI_X, ROI_Y);
-    cv::Mat originalImageRoi= originalImage(roi);
-    cv::Mat warp_dstRoi     = warp_dst(roi);
+    cv::Mat originalImageRoi = originalImage(roi);
+    cv::Mat warp_dstRoi = warp_dst(roi);
     cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
 	cv::fillConvexPoly(warp_mask, trianglePoints, 3, CV_RGB(255, 255, 255), CV_AA, 0);
 	warp_dst.copyTo(normImg, warp_mask);
@@ -117,12 +117,12 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &tri,cv::Mat &visi)
 		   shape.at<double>(con.at<int>(1,i)+n,0));
     //cv::line(image,p1,p2,c,1);
   }
+#endif
   //draw points
   for(i = 0; i < n; i++){    
     if(visi.at<int>(i,0) == 0)continue;
     p1 = cv::Point(shape.at<double>(i,0),shape.at<double>(i+n,0));
-    //c = CV_RGB(255,0,0); cv::circle(image,p1,2,c);
+    c = CV_RGB(255,255,255); cv::circle(image,p1,2,c);
   }
-#endif
   return;
 }

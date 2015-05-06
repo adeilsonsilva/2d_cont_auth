@@ -6,7 +6,7 @@ std::string getTime(){
   time (&rawtime);
   timeinfo = localtime(&rawtime);
 
-  strftime(buffer,100,"%d-%m-%Y %I:%M:%S.avi",timeinfo);
+  strftime(buffer,100,"%d-%m-%Y_%I:%M:%S",timeinfo);
   std::string str(buffer);
 
   return str;
@@ -111,3 +111,32 @@ int parse_cmd(int argc, const char** argv,
   return 0;
 }
 
+void createFolders() {
+  std::string folderName = getTime();
+  std::cout << "Pasta de saída: ../out/" << folderName << std::endl;
+  std::vector<int> comPressParam;
+  int imgCount = 0;
+  std::string folderPath = "../out/";
+  std::string commandStr;
+  const char* commandStr_C;
+  std::stringstream command;
+  char resp;
+  command << "cd ../out && mkdir " << folderName << " && cd " << folderName << " && mkdir faces && mkdir frames";
+  commandStr = command.str();
+  commandStr_C = commandStr.c_str();
+  //std::cout << "command: " << commandStr << std::endl;
+  if(std::system(commandStr_C) != 0){
+         std::cout << "O diretorio " << folderName << " já existe! Sobrescrever? [s/n]: ";
+         std::cin >> resp;
+   		 if(resp == 'n' || resp == 'N')exit(1);
+  }
+  std::stringstream videoPath;
+  videoPath << folderPath << folderName << "/video.avi";
+  std::string videoName = videoPath.str();
+  std::stringstream resultsPath;
+  resultsPath << folderPath << folderName << "/results.txt";
+  std::string resultsName = resultsPath.str();
+  std::ofstream resultsFile;
+  resultsFile.open(resultsName.c_str());
+  return;
+}
