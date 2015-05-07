@@ -143,11 +143,12 @@ int main(int argc, const char** argv)
   #endif
   
   //initialize camera and display window
-  cv::Mat frame,gray,im; double fps=0; char sss[256]; std::string text; 
+  cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text; 
   #if KINECT == 0
         cv::VideoCapture video("vid.avi");
   #endif
 
+  background = cv::imread("background.png", 1);
   meanFace = cv::imread("MeanFace.jpg");
   int64 t1,t0 = cvGetTickCount(); int fnum=0;
   //cvNamedWindow("Face Tracker",1);
@@ -164,7 +165,7 @@ int main(int argc, const char** argv)
     if(show){cv::Mat R(meanFace,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
     model.FrameReset();
   }
-  cv::imshow("MeanFace", meanFace); 
+  //cv::imshow("MeanFace", meanFace); 
 
 
   /* Pega a altura da primeira imagem. Nós precisaremos disso
@@ -248,11 +249,20 @@ int main(int argc, const char** argv)
 
     cv::Mat normFaceGray;
     normFace = normImg(normRect);
+    //cv::resize(normFaceGray,normFaceGray, cv::Size(92,112));    
     cv::cvtColor(normFace, normFaceGray, CV_BGR2GRAY);
-    //cv::resize(normFaceGray,normFaceGray, cv::Size(92,112));
-    cv::equalizeHist(normFaceGray, normFaceGray);    
-    cv::imshow("Face Normalizada",  normImg);
+    cv::equalizeHist(normFaceGray, normFaceGray);
+    cv::cvtColor(normFaceGray, normFace, CV_GRAY2RGB);
+    //cv::imshow("Face Normalizada",  normFaceGray);
     imgCount++;
+
+    /* Copia imagens para o background */
+    cv::resize(im,smallImage, cv::Size(320,240));
+    cv::Rect ImRoi( cv::Point( 120, 186 ), smallImage.size() );
+    smallImage.copyTo( background( ImRoi ) );
+    cv::resize(normFace,normFace, cv::Size(195,150));
+    cv::Rect NormRoi(cv::Point( 451, 185 ), normFace.size() );
+    normFace.copyTo( background(NormRoi ) );
 
     /* Now perform the prediction, see how easy that is: */
     int Prediction = -1;
@@ -272,7 +282,7 @@ int main(int argc, const char** argv)
 
 
     //show image and check for user input
-    cv::imshow("Reconhecimento Facial 2D", im); 
+    cv::imshow("Reconhecimento Facial 2D", background); 
 
 
     /* Writes image on the disk */
