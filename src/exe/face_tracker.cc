@@ -220,10 +220,6 @@ int main(int argc, const char** argv)
     cv::flip(im,im,1); 
     cv::cvtColor(im,gray,CV_BGR2GRAY); 
 
-    #if WRITEVIDEO
-        videoFile.write(im);
-    #endif
-
     //track this image
 	//model.FrameReset(); failed = true;
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
@@ -234,6 +230,10 @@ int main(int argc, const char** argv)
       if(show){cv::Mat R(im,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
       model.FrameReset(); failed = true;
     }     
+
+    #if WRITEVIDEO
+        videoFile.write(im);
+    #endif
 
     //draw framerate on display image 
     if(fnum >= 9){      
