@@ -23,10 +23,15 @@
 #define ROI_X 960
 #define ROI_Y 540
 
-cv::Mat firstFace, meanFace, meanGray, normImg(1, 1, 16), normFace;
+#define USER_ID 999
+
+typedef enum {LOGIN, CONT_AUTH} STAGES;
+
+cv::Mat firstFace, meanFace, meanGray, normImg(1, 1, 16), normFace, stageImg;
 cv::Rect normRect(R_X, R_Y, R_WIDTH, R_HEIGHT);
 std::vector<std::vector<cv::Point2f> > normVec;
 std::vector<cv::Point2f> pts;
+int stage = LOGIN;
 
 #include "misc.hpp"
 #include "normalization.hpp"

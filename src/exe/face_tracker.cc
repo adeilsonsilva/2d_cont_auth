@@ -125,31 +125,35 @@ int main(int argc, const char** argv)
   std::string fn_csv = std::string(csvFilePath);
 
   // Os seguintes vetores guardarão as imagens, os nomes dos personagens e as labels
-  std::vector<cv::Mat> images;
-  std::vector<std::string> names;
-  std::vector<int> labels;
+//  std::vector<cv::Mat> images;
+//  std::vector<std::string> names;
+//  std::vector<int> labels;
+
+	std::vector<cv::Mat> userImages;
+	std::vector<int> userLabels;
 
   // Leitura dos dados
-  try {
-	  read_csv(fn_csv, images, labels, names);
-  }catch (cv::Exception& e) {
-    std::cerr << "Erro ao abrir o arquivo \"" << fn_csv << "\" Motivo: " << e.msg << std::endl;
-	// nothing more we can do
-	exit(1);
-  }
+ // try {
+ //     read_csv(fn_csv, images, labels, names);
+ // }catch (cv::Exception& e) {
+ //   std::cerr << "Erro ao abrir o arquivo \"" << fn_csv << "\" Motivo: " << e.msg << std::endl;
+ //   // nothing more we can do
+ //   exit(1);
+ // }
 
   #if WRITEVIDEO
     cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(M_WIDTH,M_HEIGHT), true);
   #endif
   
   //initialize camera and display window
-  cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text; 
+  cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text;
   #if KINECT == 0
         cv::VideoCapture video("vid.avi");
   #endif
 
-  background = cv::imread("background.png", 1);
-  meanFace = cv::imread("MeanFace.jpg");
+  background = cv::imread("interface/background.png", 1);
+  stageImg = cv::imread("interface/gray.png", 1);
+  meanFace = cv::imread("user/MeanFace.jpg");
   int64 t1,t0 = cvGetTickCount(); int fnum=0;
   //cvNamedWindow("Face Tracker",1);
   std::cout << "Atalhos: "        << std::endl
@@ -196,8 +200,10 @@ int main(int argc, const char** argv)
   cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer();
   try{
     std::cout << "Treinando.." << std::endl;
-    faceRec->train(images, labels);
-    std::cout << "Fim do treino!" << std::endl;
+    //faceRec->train(images, labels);
+	//faceRec->save("datasetLBPH.xml");
+    faceRec->load("../dataset/LBPH.xml");
+	std::cout << "Fim do treino!" << std::endl;
   }catch(cv::Exception& e){
 	std::cerr << "Erro no Treino! Motivo: " << e.msg << std::endl;
 	/* Nothing more we can do */
@@ -215,13 +221,13 @@ int main(int argc, const char** argv)
 
     video >> frame;
     
-    //grab image, resize, flip and equalize histogram
+    //grab image, resize, and flip
     cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
     cv::flip(im,im,1); 
     cv::cvtColor(im,gray,CV_BGR2GRAY); 
 
     //track this image
-	//model.FrameReset(); failed = true;
+	model.FrameReset();
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
     if(model.Track(gray,wSize,fpd,nIter,clamp,fTol,fcheck) == 0){
       int idx = model._clm.GetViewIdx(); failed = false;
@@ -256,6 +262,23 @@ int main(int argc, const char** argv)
     //cv::imshow("Face Normalizada",  normFaceGray);
     imgCount++;
 
+	if(stage == LOGIN) {
+    	comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    	comPressParam.push_back(5);
+		std::string result;
+	    std::stringstream sstm;
+	    sstm << "user/" << imgCount << ".png";
+	    result = sstm.str();
+	   	cv::imwrite(result, normFaceGray, comPressParam);
+		userImages.push_back(normFaceGray);
+		userLabels.push_back(USER_ID);
+		if(imgCount == 5) {
+			faceRec->update(userImages, userLabels);
+			stage = CONT_AUTH;
+			stageImg = cv::imread("interface/green.png", 1);
+		}
+	}
+
     /* Copia imagens para o background */
     cv::resize(im,smallImage, cv::Size(320,240));
     cv::Rect ImRoi( cv::Point( 120, 186 ), smallImage.size() );
@@ -263,27 +286,36 @@ int main(int argc, const char** argv)
     cv::resize(normFace,normFace, cv::Size(195,150));
     cv::Rect NormRoi(cv::Point( 451, 185 ), normFace.size() );
     normFace.copyTo( background(NormRoi ) );
+	cv::Rect StageRoi(cv::Point( 655, 187), stageImg.size() );
+	stageImg.copyTo(background(StageRoi));
 
-    /* Now perform the prediction, see how easy that is: */
-    int Prediction = -1;
-    double confidence = 0.0;
-    int position = -1;
-    std::string nameFound;
-    faceRec->predict(normFaceGray, Prediction, confidence);
-    position = find(labels.begin(), labels.end(), Prediction) - labels.begin();
-    nameFound = names[position];
+	if(stage == CONT_AUTH) {
+    	/* Now perform the prediction, see how easy that is: */
+    	int Prediction = -1;
+    	double confidence = 0.0;
+    	//int position = -1;
+    	std::string nameFound;
+    	faceRec->predict(normFaceGray, Prediction, confidence);
+		std::string grayBoxText; 
+    	//position = find(labels.begin(), labels.end(), Prediction) - labels.begin();
+    	//nameFound = names[position];
 
-    /* Create the text we will annotate the box with: */
-    std::string grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || Name: %s\n", imgCount, Prediction, confidence, nameFound.c_str());          
-	if(resultsFile.is_open()) resultsFile << grayBoxText;
+    	/* Create the text we will annotate the box with: */
+    	//std::string grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || Name: %s\n", imgCount, Prediction, confidence, nameFound.c_str());          
+		if(Prediction == USER_ID){
+			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || USER\n", imgCount, Prediction, confidence);   
+		} else {
+			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || INTRUDER\n", imgCount, Prediction, confidence);
+		}
+		
+		if(resultsFile.is_open()) resultsFile << grayBoxText;
 
-    /* And now put it into the images (BGR AND GRAY): */
-    //putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
-
+    	/* And now put it into the images (BGR AND GRAY): */
+    	//putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
+	}
 
     //show image and check for user input
-    cv::imshow("Reconhecimento Facial 2D", background); 
-
+   	cv::imshow("Reconhecimento Facial 2D", background); 
 
     /* Writes image on the disk */
     comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);

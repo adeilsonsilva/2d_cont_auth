@@ -12,6 +12,7 @@ std::string getTime(){
   return str;
 }
 
+#if 0
 static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, std::vector<int>& labels, std::vector<std::string>& names, char separator = ';') {
     std::ifstream file(filename.c_str(), std::ifstream::in);
     cv::Mat dbImg, dbImageGray;
@@ -38,6 +39,7 @@ static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, 
         }
     }
 }
+#endif
 
 //=============================================================================
 int parse_cmd(int argc, const char** argv,
