@@ -148,7 +148,7 @@ int main(int argc, const char** argv)
   //initialize camera and display window
   cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text;
   #if KINECT == 0
-        cv::VideoCapture video("vid.avi");
+        cv::VideoCapture video("vid1.avi");
   #endif
 
   background = cv::imread("interface/background.png", 1);
@@ -213,13 +213,18 @@ int main(int argc, const char** argv)
   //loop until quit (i.e user presses ESC)
   bool failed = true;
   while(1){ 
+	model.FrameReset();
     #if KINECT
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         cv::Mat video(rgb->height, rgb->width, CV_8UC3, rgb->data);
     #endif
 
-    video >> frame;
+    #if KINECT == 0
+        video >> frame;
+    #else
+        frame = video.clone();
+    #endif
     
     //grab image, resize, and flip
     cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
@@ -227,11 +232,11 @@ int main(int argc, const char** argv)
     cv::cvtColor(im,gray,CV_BGR2GRAY); 
 
     //track this image
-	model.FrameReset();
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
     if(model.Track(gray,wSize,fpd,nIter,clamp,fTol,fcheck) == 0){
       int idx = model._clm.GetViewIdx(); failed = false;
       Draw(im,model._shape,tri,model._clm._visi[idx]); 
+	  //model.FrameReset();
     }else{
       if(show){cv::Mat R(im,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
       model.FrameReset(); failed = true;
@@ -277,6 +282,7 @@ int main(int argc, const char** argv)
 			stage = CONT_AUTH;
 			stageImg = cv::imread("interface/green.png", 1);
 		}
+        //model.FrameReset();
 	}
 
     /* Copia imagens para o background */

@@ -76,7 +76,7 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &tri,cv::Mat &visi)
   cv::Mat origIm = image.clone();
 
   //draw triangulation
-  c = CV_RGB(0,0,0);
+  c = CV_RGB(255,255,255);
   for(i = 0; i < tri.rows; i++){
     if(visi.at<int>(tri.at<int>(i,0),0) == 0 ||
        visi.at<int>(tri.at<int>(i,1),0) == 0 ||
@@ -117,12 +117,12 @@ void Draw(cv::Mat &image,cv::Mat &shape,cv::Mat &tri,cv::Mat &visi)
 		   shape.at<double>(con.at<int>(1,i)+n,0));
     //cv::line(image,p1,p2,c,1);
   }
-#endif
   //draw points
   for(i = 0; i < n; i++){    
     if(visi.at<int>(i,0) == 0)continue;
     p1 = cv::Point(shape.at<double>(i,0),shape.at<double>(i+n,0));
     c = CV_RGB(255,255,255); cv::circle(image,p1,2,c);
   }
+#endif
   return;
 }

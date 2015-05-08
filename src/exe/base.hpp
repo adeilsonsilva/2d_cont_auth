@@ -12,7 +12,7 @@
 #include <opencv/cv.h>
 
 /* Flags */
-#define KINECT 0
+#define KINECT 1
 #define WRITEVIDEO 1
 #define M_WIDTH 960
 #define M_HEIGHT 540
