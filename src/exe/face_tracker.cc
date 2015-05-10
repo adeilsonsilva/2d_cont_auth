@@ -213,7 +213,7 @@ int main(int argc, const char** argv)
   //loop until quit (i.e user presses ESC)
   bool failed = true;
   while(1){ 
-	model.FrameReset();
+	//model.FrameReset();
     #if KINECT
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
@@ -225,6 +225,8 @@ int main(int argc, const char** argv)
     #else
         frame = video.clone();
     #endif
+
+	if(frame.empty()) break;
     
     //grab image, resize, and flip
     cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
@@ -281,6 +283,8 @@ int main(int argc, const char** argv)
 			faceRec->update(userImages, userLabels);
 			stage = CONT_AUTH;
 			stageImg = cv::imread("interface/green.png", 1);
+            for(int i=0; i < 500; i++)
+				history[i] = 1.0f;
 		}
         //model.FrameReset();
 	}
@@ -306,12 +310,42 @@ int main(int argc, const char** argv)
     	//position = find(labels.begin(), labels.end(), Prediction) - labels.begin();
     	//nameFound = names[position];
 
+		pSafe = 1.0-0.5*(1.0+erf((confidence-miSafe)/(sigmaSafe*SQRT_2)));
+		pAttacked = 0.5*(1+erf((confidence-miAttacked)/(sigmaAttacked*SQRT_2)));
+		dt = tget(&t,&ct);
+		w = expf(k*dt);
+		lastPSafe *= w;
+		lastPAttacked *= w;
+		lastPSafe += pSafe;
+		lastPAttacked += pAttacked;
+		t = ct;
+
+		//float now = (lastPSafe*w)/(lastPSafe+lastPAttacked);
+        dt = tget(&t,&ct);
+		w = expf(k*dt);
+		for(int i=1; i < 500; i++)
+			history[i-1] = history[i];
+		history[499] = (lastPSafe*w)/(lastPSafe+lastPAttacked);
+		//cout << (lastPSafe*w)/(lastPSafe+lastPAttacked) << endl;
+
+// Timeline window (259,463) / 512x128
+		cv::Mat win=background(cv::Range(463,591), cv::Range(259,771));
+		win = cv::Scalar(255,255,255,255);
+
+		for(int i=0; i < 499; i++) {
+			cv::line(win, cv::Point(i,114-(int)(history[i]*100.0)), cv::Point(i+1,114-(int)(history[i+1]*100.0)), CV_RGB(0,255,0), 2, 8, 0);
+		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[0] = 255;
+		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[1] = 0;
+		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[2] = 0;
+		}
+		cv::circle(win, cv::Point(499, 114-(int)(history[499]*100.0)), 3, cv::Scalar(255,0,0,0), 1, 8, 0);
+
     	/* Create the text we will annotate the box with: */
     	//std::string grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || Name: %s\n", imgCount, Prediction, confidence, nameFound.c_str());          
 		if(Prediction == USER_ID){
-			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || USER\n", imgCount, Prediction, confidence);   
+			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || PSafe: %.2f  || USER\n", imgCount, Prediction, confidence, history[499]);   
 		} else {
-			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || INTRUDER\n", imgCount, Prediction, confidence);
+			grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || PSafe: %.2f  ||  INTRUDER\n", imgCount, Prediction, confidence, history[499]);
 		}
 		
 		if(resultsFile.is_open()) resultsFile << grayBoxText;
@@ -321,7 +355,7 @@ int main(int argc, const char** argv)
 	}
 
     //show image and check for user input
-   	cv::imshow("Reconhecimento Facial 2D", background); 
+   	cv::imshow("Autenticação Facial 2D Contínua", background); 
 
     /* Writes image on the disk */
     comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
