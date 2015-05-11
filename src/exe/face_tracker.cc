@@ -121,13 +121,15 @@ int main(int argc, const char** argv)
   resultsFile.open(resultsName.c_str());
   
   /* Caminho do CSV: */
-  std::string csvFilePath = "../dataset/csv.ext";
-  std::string fn_csv = std::string(csvFilePath);
+  //std::string csvFilePath = "../dataset/csv.ext";
+  //std::string fn_csv = std::string(csvFilePath);
 
-  // Os seguintes vetores guardarão as imagens, os nomes dos personagens e as labels
-//  std::vector<cv::Mat> images;
-//  std::vector<std::string> names;
-//  std::vector<int> labels;
+    if(!face_cascade.load(face_cascade_name)) exit(1);
+
+    //Os seguintes vetores guardarão as imagens, os nomes dos personagens e as labels
+    //std::vector<cv::Mat> images;
+    //std::vector<std::string> names;
+    //std::vector<int> labels;
 
 	std::vector<cv::Mat> userImages;
 	std::vector<int> userLabels;
@@ -148,7 +150,7 @@ int main(int argc, const char** argv)
   //initialize camera and display window
   cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text;
   #if KINECT == 0
-        cv::VideoCapture video("vid1.avi");
+        cv::VideoCapture video("video.avi");
   #endif
 
   background = cv::imread("interface/background.png", 1);
@@ -270,16 +272,25 @@ int main(int argc, const char** argv)
     imgCount++;
 
 	if(stage == LOGIN) {
-    	comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
+		std::vector<cv::Rect> faces;
+		cv::Mat saveFace;
+		face_cascade.detectMultiScale(gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE|CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(30, 30));
+   		saveFace = gray(faces[0]); 	
+		comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
     	comPressParam.push_back(5);
 		std::string result;
 	    std::stringstream sstm;
 	    sstm << "user/" << imgCount << ".png";
 	    result = sstm.str();
-	   	cv::imwrite(result, normFaceGray, comPressParam);
-		userImages.push_back(normFaceGray);
+	   	//cv::imwrite(result, normFaceGray, comPressParam);
+		//userImages.push_back(normFaceGray);
+		cv::resize(saveFace,saveFace, cv::Size(200,200));
+		cv::imwrite(result, saveFace, comPressParam);
+		userImages.push_back(saveFace);
 		userLabels.push_back(USER_ID);
 		if(imgCount == 5) {
+			tset(&ct);
+			t = ct;
 			faceRec->update(userImages, userLabels);
 			stage = CONT_AUTH;
 			stageImg = cv::imread("interface/green.png", 1);
@@ -334,9 +345,6 @@ int main(int argc, const char** argv)
 
 		for(int i=0; i < 499; i++) {
 			cv::line(win, cv::Point(i,114-(int)(history[i]*100.0)), cv::Point(i+1,114-(int)(history[i+1]*100.0)), CV_RGB(0,255,0), 2, 8, 0);
-		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[0] = 255;
-		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[1] = 0;
-		//	win.at<Vec3b>(114-(int)(history[i]*100.0),i)[2] = 0;
 		}
 		cv::circle(win, cv::Point(499, 114-(int)(history[499]*100.0)), 3, cv::Scalar(255,0,0,0), 1, 8, 0);
 

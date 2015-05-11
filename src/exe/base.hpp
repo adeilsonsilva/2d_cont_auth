@@ -38,6 +38,8 @@ float dt, w, history[500];
 float pSafe, pAttacked, lastPSafe = 0.0f, lastPAttacked = 1.0f, k = -logf(2.0f)/15.0;
 float miSafe = 82.5, sigmaSafe = 13.2, miAttacked = 122.4, sigmaAttacked = 16.2;
 
+std::string face_cascade_name = "user/haarcascade_frontalface_alt.xml";
+cv::CascadeClassifier face_cascade;
 
 #include "misc.hpp"
 #include "normalization.hpp"
