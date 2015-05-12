@@ -87,7 +87,7 @@ int main()
     }
 
 
-    cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer(2, 16, 8, 8, 400.0);
+    cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer();
 
     for (int i = 0; i < images.size() - 5; i+=5)
     {
