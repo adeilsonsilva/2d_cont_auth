@@ -21,30 +21,30 @@ TIME t, ct;
 
 #if 0
 static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, std::vector<int>& labels, std::vector<std::string>& names, char separator = ';') {
-    std::ifstream file(filename.c_str(), std::ifstream::in);
-    cv::Mat dbImg, dbImageGray;
-    if (!file) {
-        std::string error_message = "No valid input file was given, please check the given filename.";
-        CV_Error(CV_StsBadArg, error_message);
+  std::ifstream file(filename.c_str(), std::ifstream::in);
+  cv::Mat dbImg, dbImageGray;
+  if (!file) {
+    std::string error_message = "No valid input file was given, please check the given filename.";
+    CV_Error(CV_StsBadArg, error_message);
+  }
+  std::string line, path, name, classlabel;
+  while (getline(file, line)) {
+    std::stringstream liness(line);
+    std::getline(liness, path, separator);
+    std::getline(liness, name, separator);
+    std::getline(liness, classlabel);
+    if(!path.empty() && !classlabel.empty()) {
+      /* std::cout << path << std::endl;
+       * As imagens do banco estão coloridas, é necessário converte-las! 
+       * dbImg = cv::imread(path, 1);
+       * cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY); 
+       */
+      dbImageGray = cv::imread(path, 0);
+      images.push_back(dbImageGray);
+      names.push_back(name);
+      labels.push_back(atoi(classlabel.c_str()));
     }
-    std::string line, path, name, classlabel;
-    while (getline(file, line)) {
-        std::stringstream liness(line);
-        std::getline(liness, path, separator);
-	    std::getline(liness, name, separator);
-        std::getline(liness, classlabel);
-        if(!path.empty() && !classlabel.empty()) {
-            /* std::cout << path << std::endl;
-             * As imagens do banco estão coloridas, é necessário converte-las! 
-             * dbImg = cv::imread(path, 1);
-             * cv::cvtColor(dbImg, dbImageGray,CV_BGR2GRAY); 
-             */
-            dbImageGray = cv::imread(path, 0);
-            images.push_back(dbImageGray);
-	        names.push_back(name);
-            labels.push_back(atoi(classlabel.c_str()));
-        }
-    }
+  }
 }
 #endif
 

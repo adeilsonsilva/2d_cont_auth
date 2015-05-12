@@ -22,8 +22,6 @@
 #define R_HEIGHT 200
 #define R_X 57
 #define R_Y 150
-#define ROI_X 960
-#define ROI_Y 540
 #define USER_ID 999
 #define SQRT_2 1.41421356237
 
@@ -36,7 +34,10 @@ std::vector<cv::Point2f> pts;
 STAGES stage = LOGIN;
 float dt, w, history[500];
 float pSafe, pAttacked, lastPSafe = 0.0f, lastPAttacked = 1.0f, k = -logf(2.0f)/15.0;
-float miSafe = 82.5, sigmaSafe = 13.2, miAttacked = 122.4, sigmaAttacked = 16.2;
+/* Constantes para o recognizer (1, 10, 8, 8, 400.0) 
+float miSafe = 22.9548f, sigmaSafe = 18.002f, miAttacked = 47.5475f, sigmaAttacked = 7.26058f;  */
+/* Constantes para o recognizer (2, 16, 8, 8, 400.0) */
+float miSafe = 50.0103f, sigmaSafe = 37.5769f, miAttacked = 91.292f, sigmaAttacked = 9.14347f;
 
 std::string face_cascade_name = "user/haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;

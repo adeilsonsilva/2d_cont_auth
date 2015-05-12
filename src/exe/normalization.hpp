@@ -4,7 +4,7 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
     cv::Mat warp_mat( 2, 3, CV_32FC1 );
     cv::Mat warp_dst, warp_mask;
     cv::Point trianglePoints[3];
-	trianglePoints[0] = dstTri[0];
+	  trianglePoints[0] = dstTri[0];
     trianglePoints[1] = dstTri[1];
     trianglePoints[2] = dstTri[2];
     warp_dst  = cv::Mat::zeros( originalImage.rows, originalImage.cols, originalImage.type() );
@@ -14,24 +14,23 @@ void warpTextureFromTriangle(cv::Point2f srcTri[3], cv::Mat originalImage, cv::P
 
     // Get the Affine Transform
     for(int i=0;i<3;i++){
-        srcTri[i].x -= x1;
-        srcTri[i].y -= y1;
-        dstTri[i].x -= x1;
-        dstTri[i].y -= y1;
-
+      srcTri[i].x -= x1;
+      srcTri[i].y -= y1;
+      dstTri[i].x -= x1;
+      dstTri[i].y -= y1;
     }
 
     warp_mat = cv::getAffineTransform( srcTri, dstTri );
 
     /// Apply the Affine Transform just found to the src image
-    cv::Rect roi(x1, y1, ROI_X, ROI_Y);
+    cv::Rect roi(x1, y1, M_WIDTH, M_HEIGHT);
     cv::Mat originalImageRoi = originalImage(roi);
     cv::Mat warp_dstRoi = warp_dst(roi);
     cv::warpAffine( originalImageRoi, warp_dstRoi, warp_mat, warp_dstRoi.size() );
-	cv::fillConvexPoly(warp_mask, trianglePoints, 3, CV_RGB(255, 255, 255), CV_AA, 0);
-	warp_dst.copyTo(normImg, warp_mask);
-	/* Caso a Face Normalizada não esteja aparecendo,  descomente a linha abaixo e veja qual o ROI utilizado */
-	//cv::imshow("ROI", originalImageRoi);
+	  cv::fillConvexPoly(warp_mask, trianglePoints, 3, CV_RGB(255, 255, 255), CV_AA, 0);
+	  warp_dst.copyTo(normImg, warp_mask);
+  	/* Caso a Face Normalizada não esteja aparecendo,  descomente a linha abaixo e veja qual o ROI utilizado */
+  	//cv::imshow("ROI", originalImageRoi);
  }
 
 void meanDraw(cv::Mat &image, cv::Mat &shape,cv::Mat &tri,cv::Mat &visi)
@@ -49,17 +48,17 @@ void meanDraw(cv::Mat &image, cv::Mat &shape,cv::Mat &tri,cv::Mat &visi)
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
 		   shape.at<double>(tri.at<int>(i,1)+n,0));
     cv::line(image,p1,p2,c);
-	pts.push_back(p1);
-	pts.push_back(p2);
+	  pts.push_back(p1);
+	  pts.push_back(p2);
     p1 = cv::Point(shape.at<double>(tri.at<int>(i,0),0),
 		   shape.at<double>(tri.at<int>(i,0)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
 		   shape.at<double>(tri.at<int>(i,2)+n,0));
     cv::line(image,p1,p2,c);
-	pts.push_back(p2);	
-	normVec.push_back(pts);
+	  pts.push_back(p2);	
+	  normVec.push_back(pts);
     //std::cout << " Tri: " << pts.size() << std::endl;
-	pts.clear();
+	  pts.clear();
     p1 = cv::Point(shape.at<double>(tri.at<int>(i,2),0),
 		   shape.at<double>(tri.at<int>(i,2)+n,0));
     p2 = cv::Point(shape.at<double>(tri.at<int>(i,1),0),
