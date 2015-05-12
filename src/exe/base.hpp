@@ -36,8 +36,10 @@ float dt, w, history[500];
 float pSafe, pAttacked, lastPSafe = 0.0f, lastPAttacked = 1.0f, k = -logf(2.0f)/15.0;
 /* Constantes para o recognizer (1, 10, 8, 8, 400.0) 
 float miSafe = 22.9548f, sigmaSafe = 18.002f, miAttacked = 47.5475f, sigmaAttacked = 7.26058f;  */
-/* Constantes para o recognizer (2, 16, 8, 8, 400.0) */
-float miSafe = 50.0103f, sigmaSafe = 37.5769f, miAttacked = 91.292f, sigmaAttacked = 9.14347f;
+/* Constantes para o recognizer (2, 16, 8, 8, 400.0) 
+float miSafe = 50.0103f, sigmaSafe = 37.5769f, miAttacked = 91.292f, sigmaAttacked = 9.14347f;*/
+/* Constantes para o recognizer () */
+float miSafe = 20.2725f, sigmaSafe = 16.1414f, miAttacked = 43.4733f, sigmaAttacked = 7.3204f;
 
 std::string face_cascade_name = "user/haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;
