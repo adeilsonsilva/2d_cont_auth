@@ -165,7 +165,7 @@ int main(int argc, const char** argv)
   //cv::imshow("MeanFace", meanFace); 
 
   /* Cria um FaceRecognizer e treina em cima dele: */
-  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer(2, 16, 8, 8, 400.0);
+  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer();
 #if 0
   try{
     std::cout << "Treinando.." << std::endl;
@@ -182,7 +182,7 @@ int main(int argc, const char** argv)
 
   bool failed = true;
   while(1){ 
-	  model.FrameReset();
+	model.FrameReset();
     #if KINECT
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
