@@ -182,7 +182,7 @@ int main(int argc, const char** argv)
 
   bool failed = true;
   while(1){ 
-	model.FrameReset();
+	  model.FrameReset();
     #if KINECT
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
@@ -331,6 +331,9 @@ int main(int argc, const char** argv)
 
   //show image and check for user input
  	cv::imshow("Autenticação Facial 2D Contínua", background); 
+  cv::Mat t(1, 1, 16);
+  lbp::OLBP(normFaceGray, t);
+  cv::imshow("LBP Image", t);
 
   /* Writes image on the disk */
   comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);

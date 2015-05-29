@@ -22,7 +22,8 @@ SOURCE_FILES=\
 	src/lib/FDet.cc\
 	src/lib/PAW.cc\
 	src/lib/FCheck.cc\
-	src/lib/Tracker.cc
+	src/lib/Tracker.cc\
+    src/exe/lbp/lbp.cc
 
 # Source files which contain a int main(..) function
 SOURCE_FILES_WITH_MAIN=src/exe/face_tracker.cc

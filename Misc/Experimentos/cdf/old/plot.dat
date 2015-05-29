@@ -1,0 +1,19 @@
+set term pngcairo dashed enhanced font 'Verdana,14'
+set output "cdf.png"
+set xlabel "Score"
+set ylabel "Probabilidade"
+set x2label "Função de distribuição acumulada"
+set grid
+
+#set label 1 "Troca de Usuario" at 3425, 0.6
+#set xtics 1000,3000,6000
+#set xtics add ("Invasão" 2703)
+#set xtics rotate by -45
+
+safe(y) = y/2235
+nonsafe(y) = y/109515
+
+set yrange[0:1]
+
+plot "safes" using 2:safe(1) lw 3 lc rgb 'blue' title 'Seguro' with line,\
+     "non-safes" using 2:nonsafe(1) ls 0 lw 3 lc rgb 'red' title 'Inseguro' with line

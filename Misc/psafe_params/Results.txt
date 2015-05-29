@@ -1,0 +1,3 @@
+Safe Size: 2235 Non-safe Size: 109515
+MiSafe: 20.2725 MiNonSafe: 43.4733
+SigmaSafe: 16.1414 SigmaNonSafe: 7.3204

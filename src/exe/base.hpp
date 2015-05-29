@@ -46,3 +46,4 @@ cv::CascadeClassifier face_cascade;
 
 #include "misc.hpp"
 #include "normalization.hpp"
+#include "lbp/lbp.hpp"
