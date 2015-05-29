@@ -37,25 +37,16 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF 
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////////////
-#include "base.hpp"
-
-#if KINECT
-
-#include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
-#include <libfreenect2/threading.h>
-
-#endif
+#include "ContAuth/base.hpp"
 //=============================================================================
 int main(int argc, const char** argv)
 {
-
+  ContAuth::system sys();
   #if KINECT
     libfreenect2::Freenect2 freenect2;
     libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
 
-    if(dev == 0)
-    {
+    if(dev == 0){
       std::cout << "no device connected or failure opening the default one!" << std::endl;
       return -1;
     }
@@ -71,7 +62,7 @@ int main(int argc, const char** argv)
     //dev->setIrAndDepthFrameListener(&listener);
     dev->start();
   #endif
-  
+
   //parse command line arguments
   char ftFile[256],conFile[256],triFile[256];
   bool fcheck = false; double scale = 1; int fpd = -1; bool show = true;
@@ -86,67 +77,15 @@ int main(int argc, const char** argv)
   cv::Mat con=FACETRACKER::IO::LoadCon(conFile);
 
   /* Parâmetros para salvar os resultados */
-  std::string folderName = getTime();
-  std::cout << "Pasta de saída: ../out/" << folderName << std::endl;
-  std::vector<int> comPressParam;
-  int imgCount = 0;
-  std::string folderPath = "../out/";
-  std::string commandStr;
-  const char* commandStr_C;
-  std::stringstream command;
-  char resp;
-  command << "cd ../out && mkdir " << folderName << " && cd " << folderName << " && mkdir faces && mkdir frames";
-  commandStr = command.str();
-  commandStr_C = commandStr.c_str();
-  //std::cout << "command: " << commandStr << std::endl;
-  if(std::system(commandStr_C) != 0){
-         std::cout << "O diretorio " << folderName << " já existe! Sobrescrever? [s/n]: ";
-         std::cin >> resp;
-   		 if(resp == 'n' || resp == 'N')exit(1);
-  }
-  std::stringstream videoPath;
-  videoPath << folderPath << folderName << "/video.avi";
-  std::string videoName = videoPath.str();
-  std::stringstream resultsPath;
-  resultsPath << folderPath << folderName << "/results.txt";
-  std::string resultsName = resultsPath.str();
-  std::ofstream resultsFile;
-  resultsFile.open(resultsName.c_str());
-  
-  /* Caminho do CSV: 
-  std::string csvFilePath = "../dataset/csv.ext";
-  std::string fn_csv = std::string(csvFilePath);
+  sys.init();
 
-  Os seguintes vetores guardarão as imagens, os nomes dos personagens e as labels
-  std::vector<cv::Mat> images;
-  std::vector<std::string> names;
-  std::vector<int> labels;
 
-  Leitura dos dados
-  try {
-    read_csv(fn_csv, images, labels, names);
-  }catch (cv::Exception& e) {
-   std::cerr << "Erro ao abrir o arquivo \"" << fn_csv << "\" Motivo: " << e.msg << std::endl;
-   // nothing more we can do
-   exit(1);
-  }*/
-
-  std::vector<cv::Mat> userImages;
-  std::vector<int> userLabels;
-
-  #if WRITEVIDEO
-    cv::VideoWriter videoFile(videoName, CV_FOURCC('M','J','P','G'), 5, cv::Size(M_WIDTH,M_HEIGHT), true);
-  #endif
-  
   //initialize camera and display window
   cv::Mat frame,gray,im, background, smallImage; double fps=0; char sss[256]; std::string text;
   #if KINECT == 0
     cv::VideoCapture video("video.avi");
   #endif
 
-  background = cv::imread("interface/background.png", 1);
-  stageImg = cv::imread("interface/gray.png", 1);
-  meanFace = cv::imread("user/MeanFace.jpg");
   int64 t1,t0 = cvGetTickCount();
   //cvNamedWindow("Face Tracker",1);
   std::cout << "Atalhos: "        << std::endl
@@ -164,21 +103,6 @@ int main(int argc, const char** argv)
   }
   //cv::imshow("MeanFace", meanFace); 
 
-  /* Cria um FaceRecognizer e treina em cima dele: */
-  cv::Ptr<cv::face::FaceRecognizer> faceRec = cv::face::createLBPHFaceRecognizer();
-#if 0
-  try{
-    std::cout << "Treinando.." << std::endl;
-    /*faceRec->train(images, labels);
-	  faceRec->save("../dataset/LBPH.xml");*/
-    faceRec->load("../dataset/LBPH.xml");
-	std::cout << "Fim do treino!" << std::endl;
-  }catch(cv::Exception& e){
-	  std::cerr << "Erro no Treino! Motivo: " << e.msg << std::endl;
-	  /* Nothing more we can do */
-	  exit(1);
-  }
-#endif
 
   bool failed = true;
   while(1){ 
@@ -196,11 +120,12 @@ int main(int argc, const char** argv)
     #endif
 
 	if(frame.empty()) { std::cout << "Fim do vídeo!" << std::endl; break;}
-    
+
     //grab image, resize, and flip
-    cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
-    cv::flip(im,im,1); 
-    cv::cvtColor(im,gray,CV_BGR2GRAY);
+    sys.setImage(frame);
+    // cv::resize(frame,im, cv::Size(M_WIDTH,M_HEIGHT));
+    // cv::flip(im,im,1); 
+    // cv::cvtColor(im,gray,CV_BGR2GRAY);
 
     //track this image
     std::vector<int> wSize; if(failed)wSize = wSize2; else wSize = wSize1; 
@@ -211,7 +136,7 @@ int main(int argc, const char** argv)
     }else{
       if(show){cv::Mat R(im,cvRect(0,0,150,50)); R = cv::Scalar(0,0,255);}
       model.FrameReset(); failed = true;
-    }     
+    }
 
     #if WRITEVIDEO
         videoFile.write(im);
@@ -245,108 +170,56 @@ int main(int argc, const char** argv)
     cv::equalizeHist(normFaceGray, normFaceGray);
     cv::cvtColor(normFaceGray, normFace, CV_GRAY2RGB);
     //cv::imshow("Face Normalizada",  normFaceGray);
-    imgCount++;
+    sys->imgCount++;
 
-	if(stage == LOGIN) {
-		comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
-    comPressParam.push_back(5); 
-		std::string result;
-	  std::stringstream sstm;
-	  sstm << "user/" << imgCount << ".png";
-	  result = sstm.str();
-	  cv::imwrite(result, normFaceGray, comPressParam);
-		userLabels.push_back(USER_ID);
-    userImages.push_back(normFaceGray);
+	if(sys.checkStage(LOGIN)) {
+    user.saveLoginImage();
+		user.pushParams();
+    user.pushNormImg();
 		if(imgCount == 5) {
-			tset(&ct);
-			t = ct;
-      try {
-        std::cout << "Treinando imagens de usuário!" << std::endl;
-        //faceRec->update(userImages, userLabels);
-        faceRec->train(userImages, userLabels);
-        std::cout << "Fim do treino!" << std::endl;
-      }catch(cv::Exception& e){
-        std::cerr << "Erro no Treino! Motivo: " << e.msg << std::endl;
-        /* Nothing more we can do */
-        break;
-      }
-      stage = CONT_AUTH;
-			stageImg = cv::imread("interface/green.png", 1);
-      for(int i=0; i < 500; i++)
-				history[i] = 1.0f;
+      sys.setTime();
+      user.trainRec();
+      sys.changeStage(CONT_AUTH);
+      sys.clearHistory();
 		}
 	}
 
-  /* Copia imagens para o background */
-  cv::resize(im,smallImage, cv::Size(320,240));
-  cv::Rect ImRoi( cv::Point( 120, 186 ), smallImage.size() );
-  smallImage.copyTo( background( ImRoi ) );
-  cv::resize(normFace,normFace, cv::Size(195,150));
-  cv::Rect NormRoi(cv::Point( 451, 185 ), normFace.size() );
-  normFace.copyTo( background(NormRoi ) );
-	cv::Rect StageRoi(cv::Point( 655, 187), stageImg.size() );
-	stageImg.copyTo(background(StageRoi));
+  sys.loadBackground();
 
-	if(stage == CONT_AUTH) {
-  	/* Now perform the prediction, see how easy that is: */
-  	int Prediction = -1;
-  	double confidence = 0.0;
-  	std::string nameFound;
-  	faceRec->predict(normFaceGray, Prediction, confidence);
-		std::string grayBoxText; 
-
-		pSafe = 1.0-0.5*(1.0+erf((confidence-miSafe)/(sigmaSafe*SQRT_2)));
-		pAttacked = 0.5*(1+erf((confidence-miAttacked)/(sigmaAttacked*SQRT_2)));
-		dt = tget(&t,&ct);
-		w = expf(k*dt);
-		lastPSafe *= w;
-		lastPAttacked *= w;
-		lastPSafe += pSafe;
-		lastPAttacked += pAttacked;
-		t = ct;
-    dt = tget(&t,&ct);
-		w = expf(k*dt);
-		for(int i=1; i < 500; i++)
-			history[i-1] = history[i];
-		history[499] = (lastPSafe*w)/(lastPSafe+lastPAttacked);
-
+	if(sys.checkStage(CONT_AUTH)) {
+    double score = user.recognize();
+    sys.calcPsafe(score);
+		// pSafe = 1.0-0.5*(1.0+erf((confidence-miSafe)/(sigmaSafe*SQRT_2)));
+		// pAttacked = 0.5*(1+erf((confidence-miAttacked)/(sigmaAttacked*SQRT_2)));
+		// dt = tget(&t,&ct);
+		// w = expf(k*dt);
+		// lastPSafe *= w;
+		// lastPAttacked *= w;
+		// lastPSafe += pSafe;
+		// lastPAttacked += pAttacked;
+		// t = ct;
+  //   dt = tget(&t,&ct);
+		// w = expf(k*dt);
+		// for(int i=1; i < 500; i++)
+		// 	history[i-1] = history[i];
+		// history[499] = (lastPSafe*w)/(lastPSafe+lastPAttacked);
+    sys.drawBackground();
     // Timeline window (259,463) / 512x128
-		cv::Mat win=background(cv::Range(463,591), cv::Range(259,771));
-		win = cv::Scalar(255,255,255,255);
+		// cv::Mat win=background(cv::Range(463,591), cv::Range(259,771));
+		// win = cv::Scalar(255,255,255,255);
 
-		for(int i=0; i < 499; i++) {
-			cv::line(win, cv::Point(i,114-(int)(history[i]*100.0)), cv::Point(i+1,114-(int)(history[i+1]*100.0)), CV_RGB(0,255,0), 2, 8, 0);
-		}
-		cv::circle(win, cv::Point(499, 114-(int)(history[499]*100.0)), 3, cv::Scalar(255,0,0,0), 1, 8, 0);
+		// for(int i=0; i < 499; i++) {
+		// 	cv::line(win, cv::Point(i,114-(int)(history[i]*100.0)), cv::Point(i+1,114-(int)(history[i+1]*100.0)), CV_RGB(0,255,0), 2, 8, 0);
+		// }
+		// cv::circle(win, cv::Point(499, 114-(int)(history[499]*100.0)), 3, cv::Scalar(255,0,0,0), 1, 8, 0);
 
-    /* Create the text we will annotate the box with: */
-    //std::string grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || Name: %s\n", imgCount, Prediction, confidence, nameFound.c_str());          
-		grayBoxText = cv::format("Frame: %d || Prediction: %d || Confidence: %.2f || PSafe: %.2f \n", imgCount, Prediction, confidence, history[499]);  
-		
-		if(resultsFile.is_open()) resultsFile << grayBoxText;
-
-    	/* And now put it into the images (BGR AND GRAY): */
-    	//putText(im, grayBoxText, cv::Point(300, 300), cv::FONT_HERSHEY_PLAIN, 1.0, CV_RGB(0,0,255), 2.0);
+    sys.saveResults();
 	}
 
-  //show image and check for user input
- 	cv::imshow("Autenticação Facial 2D Contínua", background); 
-  cv::Mat t(1, 1, 16);
-  lbp::OLBP(normFaceGray, t);
-  cv::imshow("LBP Image", t);
+  sys.showBackground();
 
-  /* Writes image on the disk */
-  comPressParam.push_back(CV_IMWRITE_PNG_COMPRESSION);
-  comPressParam.push_back(5);
-  std::string result;
-  std::stringstream sstm;
-  sstm << folderPath << folderName << "/frames/" << imgCount << ".png";
-  result = sstm.str();
-  cv::imwrite(result, im, comPressParam);
-	sstm.str("");
-  sstm << folderPath << folderName << "/faces/" << imgCount << ".png";
-	result = sstm.str();
-	cv::imwrite(result, normFaceGray, comPressParam);
+  sys.saveImage("/frames/");
+  sys.saveImage("/faces/");
 
   int c = cvWaitKey(1);
   if(char(c) == 's')break; else if(char(c) == 'd')model.FrameReset();

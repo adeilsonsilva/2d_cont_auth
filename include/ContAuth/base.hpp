@@ -41,9 +41,12 @@ float miSafe = 50.0103f, sigmaSafe = 37.5769f, miAttacked = 91.292f, sigmaAttack
 /* Constantes para o recognizer () */
 float miSafe = 20.2725f, sigmaSafe = 16.1414f, miAttacked = 43.4733f, sigmaAttacked = 7.3204f;
 
-std::string face_cascade_name = "user/haarcascade_frontalface_alt.xml";
-cv::CascadeClassifier face_cascade;
-
 #include "misc.hpp"
 #include "normalization.hpp"
 #include "lbp/lbp.hpp"
+
+#if KINECT
+	#include <libfreenect2/libfreenect2.hpp>
+	#include <libfreenect2/frame_listener_impl.h>
+	#include <libfreenect2/threading.h>
+#endif

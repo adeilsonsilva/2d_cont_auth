@@ -1,24 +1,3 @@
-std::string getTime(){
-  time_t rawtime;
-  struct tm * timeinfo;
-  char buffer[100];
-
-  time (&rawtime);
-  timeinfo = localtime(&rawtime);
-
-  strftime(buffer,100,"%d-%m-%Y_%I:%M:%S",timeinfo);
-  std::string str(buffer);
-
-  return str;
-}
-
-typedef struct timeval TIME;
-#define tset(t) gettimeofday(t, NULL)
-double tget(TIME *t0, TIME *t1)  {
-		return t1->tv_sec-t0->tv_sec+(t1->tv_usec-t0->tv_usec)*0.000001;
-}
-TIME t, ct;
-
 #if 0
 static void read_csv(const std::string& filename, std::vector<cv::Mat>& images, std::vector<int>& labels, std::vector<std::string>& names, char separator = ';') {
   std::ifstream file(filename.c_str(), std::ifstream::in);
