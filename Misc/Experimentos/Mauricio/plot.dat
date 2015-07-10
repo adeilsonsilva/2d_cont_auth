@@ -11,6 +11,6 @@ set grid
 set xtics add ("Invasão" 2703)
 set xtics rotate by -45
 
-plot "mauricio" using 1:2 lw 3 lc rgb 'blue' title 'Usuario 3' with line smooth csplines,\
-     "mateus" using 1:2 ls 0 lw 3 lc rgb 'red' title 'Usuario 2' with line smooth csplines,\
-     "adeilson" using 1:2 ls 0 lw 3 lc rgb 'green' title 'Usuario 1' with line smooth csplines
+plot "mauricio" using 1:2 lw 3 lc rgb 'blue' title 'Usuario 3' with line,\
+     "mateus" using 1:2 ls 0 lw 3 lc rgb 'red' title 'Usuario 2' with line,\
+     "adeilson" using 1:2 ls 0 lw 3 lc rgb 'green' title 'Usuario 1' with line
