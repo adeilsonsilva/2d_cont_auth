@@ -1,7 +1,0 @@
-set term png
-set output "bbb.png"
-set xlabel "Frames"
-set ylabel "PSafe"
-
-set label 1 "Troca de Usuario" at 3425, 0.6
-plot "experimento1" using 1 lw 2 lc rgb 'blue' title 'Experimento 1' with lines smooth csplines
